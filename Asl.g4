@@ -1,36 +1,13 @@
-//////////////////////////////////////////////////////////////////////
-//
-//    Asl - Another simple language (grammar)
-//
-//    Copyright (C) 2017  Universitat Politecnica de Catalunya
-//
-//    This library is free software; you can redistribute it and/or
-//    modify it under the terms of the GNU General Public License
-//    as published by the Free Software Foundation; either version 3
-//    of the License, or (at your option) any later version.
-//
-//    This library is distributed in the hope that it will be useful,
-//    but WITHOUT ANY WARRANTY; without even the implied warranty of
-//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-//    Affero General Public License for more details.
-//
-//    You should have received a copy of the GNU Affero General Public
-//    License along with this library; if not, write to the Free Software
-//    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
-//    contact: José Miguel Rivero (rivero@cs.upc.edu)
-//             Computer Science Department
-//             Universitat Politecnica de Catalunya
-//             despatx Omega.110 - Campus Nord UPC
-//             08034 Barcelona.  SPAIN
-//
-//////////////////////////////////////////////////////////////////////
+/*============================================*/
+/* ASL (A Simple Language) grammar file       */
+/* Nil Vilas & Pau Nunez | 2018/2019-Q2       */
+/*============================================*/
 
 grammar Asl;
 
-//////////////////////////////////////////////////
-/// Parser Rules
-//////////////////////////////////////////////////
+/*============================================*/
+/* Parser Rules                               */
+/*============================================*/
 
 // A program is a list of functions
 program : function+ EOF
@@ -38,18 +15,26 @@ program : function+ EOF
 
 // A function has a name, a list of parameters and a list of statements
 function
-        : FUNC ID '(' ')' declarations statements ENDFUNC
+        : FUNC ID '(' func_decl_params ')' ( | ':' type) declarations statements ENDFUNC
+        ;
+
+func_decl_params
+        : ( | ID ':' (type | array_decl) (',' ID ':' (type | array_decl))* )
         ;
 
 declarations
         : (variable_decl)*
         ;
 
-variable_decl
-        : VAR ID ':' type
+array_decl
+        : ARRAY '[' INTVAL ']' 'of' type
         ;
 
-type    : INT
+variable_decl
+        : VAR ID (',' ID)* ':' (type | array_decl)
+        ;
+
+type    : INT | FLOAT | BOOL | CHAR
         ;
 
 statements
@@ -59,54 +44,102 @@ statements
 // The different types of instructions
 statement
           // Assignment
-        : left_expr ASSIGN expr ';'           # assignStmt
+        : left_expr ASSIGN expr ';'                           # assignStmt
           // if-then-else statement (else is optional)
-        | IF expr THEN statements ENDIF       # ifStmt
+        | IF expr THEN statements (ELSE statements)? ENDIF    # ifStmt
+          // while-do-endwhile statement
+        | WHILE expr 'do' statements ENDWHILE                 # whileStmt
           // A function/procedure call has a list of arguments in parenthesis (possibly empty)
-        | ident '(' ')' ';'                   # procCall
+        | ident '(' (expr (',' expr)*)? ')' ';'               # procCall
+          // Return statement
+        | RETURN expr? ';'                                    # returnStmt
           // Read a variable
-        | READ left_expr ';'                  # readStmt
+        | READ left_expr ';'                                  # readStmt
           // Write an expression
-        | WRITE expr ';'                      # writeExpr
+        | WRITE expr ';'                                      # writeExpr
           // Write a string
-        | WRITE STRING ';'                    # writeString
+        | WRITE STRING ';'                                    # writeString
         ;
 // Grammar for left expressions (l-values in C++)
 left_expr
-        : ident
+        : ident ('[' expr ']')?
         ;
 
-// Grammar for expressions with boolean, relational and aritmetic operators
-expr    : expr op=MUL expr                    # arithmetic
-        | expr op=PLUS expr                   # arithmetic
-        | expr op=EQUAL expr                  # relational
-        | INTVAL                              # value
-        | ident                               # exprIdent
+// Grammar for expressions with boolean, relational and arithmetic operators
+expr    : '(' expr ')'                                            # parenthesis
+        | ID '[' expr ']'                                         # arrayIndex
+        | (op=NOT|op=ADD|op=SUB) expr                             # unary
+        | expr (op=MUL|op=DIV|op=MOD) expr                        # arithmetic
+        | expr (op=ADD|op=SUB) expr                               # arithmetic
+        | expr (op=EQ|op=NEQ|op=GT|op=GTE|op=LT|op=LTE) expr      # relational
+        | expr (op=AND) expr                                      # logical
+        | expr (op=OR) expr                                       # logical
+        | (INTVAL|FLOATVAL|BOOLVAL|CHARVAL)                       # value
+        | ident                                                   # exprIdent
         ;
 
 ident   : ID
         ;
 
-//////////////////////////////////////////////////
-/// Lexer Rules
-//////////////////////////////////////////////////
+/*============================================*/
+/* Lexer Rules                                */
+/*============================================*/
 
 ASSIGN    : '=' ;
-EQUAL     : '==' ;
-PLUS      : '+' ;
-MUL       : '*';
-VAR       : 'var';
-INT       : 'int';
+
+/*=== Arithmetic ===*/
+ADD       : '+' ;
+SUB       : '-' ;
+MUL       : '*' ;
+DIV       : '/' ;
+MOD       : '%' ;
+
+/*=== Relational ===*/
+EQ        : '==' ;
+NEQ       : '!=' ;
+GT        : '>' ;
+GTE       : '>=' ;
+LT        : '<' ;
+LTE       : '<=' ;
+
+/*=== Logical ===*/
+AND       : 'and' ;
+OR        : 'or' ;
+NOT       : 'not' ;
+TRUE      : 'true' ;
+FALSE     : 'false' ;
+
+/*=== Var & Types ===*/
+VAR       : 'var' ;
+INT       : 'int' ;
+FLOAT     : 'float' ;
+BOOL      : 'bool' ;
+CHAR      : 'char' ;
+ARRAY     : 'array' ;
+
+/*=== Control Struct ===*/
 IF        : 'if' ;
 THEN      : 'then' ;
 ELSE      : 'else' ;
 ENDIF     : 'endif' ;
+WHILE     : 'while' ;
+ENDWHILE  : 'endwhile' ;
+
 FUNC      : 'func' ;
 ENDFUNC   : 'endfunc' ;
+RETURN    : 'return' ;
+
 READ      : 'read' ;
 WRITE     : 'write' ;
+
 ID        : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')* ;
+
+/*=== Literal Values ===*/
 INTVAL    : ('0'..'9')+ ;
+FLOATVAL  : ('0'..'9')+ '.' ('0'..'9')+ ;
+BOOLVAL   : TRUE | FALSE ;
+CHARVAL   : '\'' (ESC_SEQ | ~('\'') | ) '\'' ;
+
 
 // Strings (in quotes) with escape sequences
 STRING    : '"' ( ESC_SEQ | ~('\\'|'"') )* '"' ;
