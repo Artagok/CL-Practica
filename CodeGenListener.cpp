@@ -93,13 +93,15 @@ void CodeGenListener::exitDeclarations(AslParser::DeclarationsContext *ctx) {
 void CodeGenListener::enterVariable_decl(AslParser::Variable_declContext *ctx) {
   DEBUG_ENTER();
 }
+
+
 void CodeGenListener::exitVariable_decl(AslParser::Variable_declContext *ctx) {
-  subroutine       & subrRef = Code.get_last_subroutine();
+ /* subroutine       & subrRef = Code.get_last_subroutine();
   TypesMgr::TypeId        t1 = getTypeDecor(ctx->type());
   std::size_t           size = Types.getSizeOfType(t1);
-  subrRef.add_var(ctx->ID()->getText(), size);
+  subrRef.add_var(ctx->ID()->getText(), size); */
   DEBUG_EXIT();
-}
+} 
 
 void CodeGenListener::enterType(AslParser::TypeContext *ctx) {
   DEBUG_ENTER();
@@ -141,7 +143,9 @@ void CodeGenListener::exitAssignStmt(AslParser::AssignStmtContext *ctx) {
 void CodeGenListener::enterIfStmt(AslParser::IfStmtContext *ctx) {
   DEBUG_ENTER();
 }
+
 void CodeGenListener::exitIfStmt(AslParser::IfStmtContext *ctx) {
+  /*
   instructionList   code;
   std::string      addr1 = getAddrDecor(ctx->expr());
   instructionList  code1 = getCodeDecor(ctx->expr());
@@ -150,7 +154,7 @@ void CodeGenListener::exitIfStmt(AslParser::IfStmtContext *ctx) {
   std::string labelEndIf = "endif"+label;
   code = code1 || instruction::FJUMP(addr1, labelEndIf) ||
          code2 || instruction::LABEL(labelEndIf);
-  putCodeDecor(ctx, code);
+  putCodeDecor(ctx, code); */
   DEBUG_EXIT();
 }
 

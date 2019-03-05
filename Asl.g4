@@ -68,12 +68,12 @@ left_expr
 // Grammar for expressions with boolean, relational and arithmetic operators
 expr    : '(' expr ')'                                            # parenthesis
         | ID '[' expr ']'                                         # arrayIndex
-        | (op=NOT|op=ADD|op=SUB) expr                             # unary
-        | expr (op=MUL|op=DIV|op=MOD) expr                        # arithmetic
-        | expr (op=ADD|op=SUB) expr                               # arithmetic
-        | expr (op=EQ|op=NEQ|op=GT|op=GTE|op=LT|op=LTE) expr      # relational
-        | expr (op=AND) expr                                      # logical
-        | expr (op=OR) expr                                       # logical
+        | op=(NOT|ADD|SUB) expr                                   # unary
+        | expr op=(MUL|DIV|MOD) expr                              # arithmetic
+        | expr op=(ADD|SUB) expr                                  # arithmetic
+        | expr op=(EQ|NEQ|GT|GTE|LT|LTE) expr                     # relational
+        | expr op=AND expr                                        # logical
+        | expr op=OR expr                                         # logical
         | (INTVAL|FLOATVAL|BOOLVAL|CHARVAL)                       # value
         | ident                                                   # exprIdent
         ;
@@ -138,7 +138,7 @@ ID        : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')* ;
 INTVAL    : ('0'..'9')+ ;
 FLOATVAL  : ('0'..'9')+ '.' ('0'..'9')+ ;
 BOOLVAL   : TRUE | FALSE ;
-CHARVAL   : '\'' (ESC_SEQ | ~('\'') | ) '\'' ;
+CHARVAL   : '\'' ~('\'' | '\\') '\'' ;
 
 
 // Strings (in quotes) with escape sequences
