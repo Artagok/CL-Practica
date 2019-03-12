@@ -31,3 +31,4 @@ Makefile
 SymbolsListener.o
 TypeCheckListener.o
 OLD.gram
+*.temp
