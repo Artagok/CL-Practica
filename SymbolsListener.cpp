@@ -1,32 +1,3 @@
-//////////////////////////////////////////////////////////////////////
-//
-//    SymbolsListener - Walk the parser tree to register symbols
-//                      for the Asl programming language
-//
-//    Copyright (C) 2018  Universitat Politecnica de Catalunya
-//
-//    This library is free software; you can redistribute it and/or
-//    modify it under the terms of the GNU General Public License
-//    as published by the Free Software Foundation; either version 3
-//    of the License, or (at your option) any later version.
-//
-//    This library is distributed in the hope that it will be useful,
-//    but WITHOUT ANY WARRANTY; without even the implied warranty of
-//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-//    Affero General Public License for more details.
-//
-//    You should have received a copy of the GNU Affero General Public
-//    License along with this library; if not, write to the Free Software
-//    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
-//    contact: José Miguel Rivero (rivero@cs.upc.edu)
-//             Computer Science Department
-//             Universitat Politecnica de Catalunya
-//             despatx Omega.110 - Campus Nord UPC
-//             08034 Barcelona.  SPAIN
-//
-//////////////////////////////////////////////////////////////////////
-
 #include "SymbolsListener.h"
 
 #include "antlr4-runtime.h"
@@ -93,6 +64,13 @@ void SymbolsListener::exitFunction(AslParser::FunctionContext *ctx) {
   DEBUG_EXIT();
 }
 
+void SymbolsListener::enterFunc_decl_params(AslParser::Func_decl_paramsContext *ctx) {
+
+}
+void SymbolsListener::exitFunc_decl_params(AslParser::Func_decl_paramsContext *ctx) {
+
+}
+
 void SymbolsListener::enterDeclarations(AslParser::DeclarationsContext *ctx) {
   DEBUG_ENTER();
 }
@@ -131,8 +109,30 @@ void SymbolsListener::enterType(AslParser::TypeContext *ctx) {
   DEBUG_ENTER();
 }
 void SymbolsListener::exitType(AslParser::TypeContext *ctx) {
-  if (ctx->INT()) {
+  if (ctx->basic_type()->INT()) {
     TypesMgr::TypeId t = Types.createIntegerTy();
+    putTypeDecor(ctx, t);
+  }
+  else if (ctx->basic_type()->FLOAT()) {
+    TypesMgr::TypeId t = Types.createFloatTy();
+    putTypeDecor(ctx, t);
+  }
+  else if (ctx->basic_type()->BOOL()) {
+    TypesMgr::TypeId t = Types.createBooleanTy();
+    putTypeDecor(ctx, t);
+  }
+  else if (ctx->basic_type()->CHAR()) {
+    TypesMgr::TypeId t = Types.createCharacterTy();
+    putTypeDecor(ctx, t);
+  }
+  else {
+    unsigned int size = ctx->array_decl()->INTVAL();
+    TypesMgr::TypeId elemType;
+    if (ctx->array_decl()->basic_type()->INT())         elemType = Types.createIntegerTy();
+    else if (ctx->array_decl()->basic_type()->FLOAT())  elemType = Types.createFloatTy();
+    else if (ctx->array_decl()->basic_type()->BOOL())   elemType = Types.createBooleanTy();
+    else if (ctx->array_decl()->basic_type()->CHAR())   elemType = Types.createCharacterTy();
+    TypesMgr::TypeId t = Types.createArrayTy(size,elemType);
     putTypeDecor(ctx, t);
   }
   DEBUG_EXIT();
@@ -213,6 +213,13 @@ void SymbolsListener::enterValue(AslParser::ValueContext *ctx) {
 }
 void SymbolsListener::exitValue(AslParser::ValueContext *ctx) {
   DEBUG_EXIT();
+}
+
+void SymbolsListener::enterLogical(AslParser::LogicalContext *ctx) {
+
+}
+void SymbolsListener::exitLogical(AslParser::LogicalContext *ctx) {
+  
 }
 
 void SymbolsListener::enterExprIdent(AslParser::ExprIdentContext *ctx) {

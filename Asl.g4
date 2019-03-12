@@ -15,11 +15,11 @@ program : function+ EOF
 
 // A function has a name, a list of parameters and a list of statements
 function
-        : FUNC ID '(' func_decl_params ')' ( | ':' type) declarations statements ENDFUNC
+        : FUNC ID '(' func_decl_params ')' ( | ':' basic_type) declarations statements ENDFUNC
         ;
 
 func_decl_params
-        : ( | ID ':' (type | array_decl) (',' ID ':' (type | array_decl))* )
+        : ( | ID ':' type (',' ID ':' type)* )
         ;
 
 declarations
@@ -27,14 +27,18 @@ declarations
         ;
 
 array_decl
-        : ARRAY '[' INTVAL ']' 'of' type
+        : ARRAY '[' INTVAL ']' 'of' basic_type
         ;
 
 variable_decl
-        : VAR ID (',' ID)* ':' (type | array_decl)
+        : VAR ID (',' ID)* ':' type
         ;
 
-type    : INT | FLOAT | BOOL | CHAR
+type    : basic_type | array_decl
+        ;
+
+basic_type 
+        : INT | FLOAT | BOOL | CHAR
         ;
 
 statements
@@ -68,6 +72,7 @@ left_expr
 // Grammar for expressions with boolean, relational and arithmetic operators
 expr    : '(' expr ')'                                            # parenthesis
         | ID '[' expr ']'                                         # arrayIndex
+        | ID '(' (expr (',' expr)*)? ')'                          # funcCall
         | op=(NOT|ADD|SUB) expr                                   # unary
         | expr op=(MUL|DIV|MOD) expr                              # arithmetic
         | expr op=(ADD|SUB) expr                                  # arithmetic
