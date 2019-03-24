@@ -1,31 +1,3 @@
-//////////////////////////////////////////////////////////////////////
-//
-//    TypeCheckListener - Walk the parser tree to do the semantic
-//                        typecheck for the Asl programming language
-//
-//    Copyright (C) 2018  Universitat Politecnica de Catalunya
-//
-//    This library is free software; you can redistribute it and/or
-//    modify it under the terms of the GNU General Public License
-//    as published by the Free Software Foundation; either version 3
-//    of the License, or (at your option) any later version.
-//
-//    This library is distributed in the hope that it will be useful,
-//    but WITHOUT ANY WARRANTY; without even the implied warranty of
-//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-//    Affero General Public License for more details.
-//
-//    You should have received a copy of the GNU Affero General Public
-//    License along with this library; if not, write to the Free Software
-//    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
-//    contact: José Miguel Rivero (rivero@cs.upc.edu)
-//             Computer Science Department
-//             Universitat Politecnica de Catalunya
-//             despatx Omega.110 - Campus Nord UPC
-//             08034 Barcelona.  SPAIN
-//
-//////////////////////////////////////////////////////////////////////
 
 #include "TypeCheckListener.h"
 
@@ -113,13 +85,19 @@ void TypeCheckListener::enterAssignStmt(AslParser::AssignStmtContext *ctx) {
   DEBUG_ENTER();
 }
 void TypeCheckListener::exitAssignStmt(AslParser::AssignStmtContext *ctx) {
+
   TypesMgr::TypeId t1 = getTypeDecor(ctx->left_expr());
   TypesMgr::TypeId t2 = getTypeDecor(ctx->expr());
+
+  // typeTo (t1) = TypeFrom (t2) | t2 cannot be copied to t1
   if ((not Types.isErrorTy(t1)) and (not Types.isErrorTy(t2)) and
       (not Types.copyableTypes(t1, t2)))
     Errors.incompatibleAssignment(ctx->ASSIGN());
+
+  // t1 is not an lValue, assignment not possible
   if ((not Types.isErrorTy(t1)) and (not getIsLValueDecor(ctx->left_expr())))
     Errors.nonReferenceableLeftExpr(ctx->left_expr());
+
   DEBUG_EXIT();
 }
 
@@ -127,22 +105,63 @@ void TypeCheckListener::enterIfStmt(AslParser::IfStmtContext *ctx) {
   DEBUG_ENTER();
 }
 void TypeCheckListener::exitIfStmt(AslParser::IfStmtContext *ctx) {
+
   TypesMgr::TypeId t1 = getTypeDecor(ctx->expr());
+
+  // expr is not a bool
   if ((not Types.isErrorTy(t1)) and (not Types.isBooleanTy(t1)))
     Errors.booleanRequired(ctx);
   DEBUG_EXIT();
 }
 
+void TypeCheckListener::enterWhileStmt(AslParser::WhileStmtContext * ctx) {
+  DEBUG_ENTER();
+}
+void TypeCheckListener::exitWhileStmt(AslParser::WhileStmtContext * ctx) {
+
+  TypesMgr::TypeId t1 = getTypeDecor(ctx->expr());
+
+  //expr is not a bool
+  if ((not Types.isErrorTy(t1)) and (not Types.isBooleanTy(t1)))
+    Errors.booleanRequired(ctx);
+  DEBUG_EXIT();
+}
+
+
 void TypeCheckListener::enterProcCall(AslParser::ProcCallContext *ctx) {
   DEBUG_ENTER();
 }
 void TypeCheckListener::exitProcCall(AslParser::ProcCallContext *ctx) {
+  
   TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
+  // t1 is not a function, so it is not callable
   if (not Types.isFunctionTy(t1) and not Types.isErrorTy(t1)) {
     Errors.isNotCallable(ctx->ident());
   }
   DEBUG_EXIT();
 }
+
+void TypeCheckListener::enterReturnStmt(AslParser::ReturnStmtContext * ctx) {
+  DEBUG_ENTER();
+}
+void TypeCheckListener::exitReturnStmt(AslParser::ReturnStmtContext * ctx) {
+
+  if (ctx->expr() != NULL) {
+
+    TypesMgr::TypeId t1 = getTypeDecor(ctx->expr());
+    
+    // return type is Non-Primitive
+    if (not Types.isErrorTy(t1) and not Types.isPrimitiveNonVoidTy(t1))
+      Errors.incompatibleReturn(ctx->RETURN());
+
+    // return type does not match
+
+    // function was void
+  }
+
+  DEBUG_EXIT();
+}
+
 
 void TypeCheckListener::enterReadStmt(AslParser::ReadStmtContext *ctx) {
   DEBUG_ENTER();
