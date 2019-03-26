@@ -111,8 +111,6 @@ LTE       : '<=' ;
 AND       : 'and' ;
 OR        : 'or' ;
 NOT       : 'not' ;
-TRUE      : 'true' ;
-FALSE     : 'false' ;
 
 /*=== Var & Types ===*/
 VAR       : 'var' ;
@@ -137,14 +135,13 @@ RETURN    : 'return' ;
 READ      : 'read' ;
 WRITE     : 'write' ;
 
-ID        : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')* ;
-
 /*=== Literal Values ===*/
 INTVAL    : ('0'..'9')+ ;
 FLOATVAL  : ('0'..'9')+ '.' ('0'..'9')+ ;
-BOOLVAL   : TRUE | FALSE ;
+BOOLVAL   : 'true' | 'false' ;
 CHARVAL   : '\'' ~('\'' | '\\') '\'' ;
 
+ID        : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')* ;
 
 // Strings (in quotes) with escape sequences
 STRING    : '"' ( ESC_SEQ | ~('\\'|'"') )* '"' ;
