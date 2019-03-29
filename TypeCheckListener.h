@@ -76,6 +76,12 @@ public:
   void enterLeft_expr(AslParser::Left_exprContext *ctx);
   void exitLeft_expr(AslParser::Left_exprContext *ctx);
 
+  void enterArrayIndex(AslParser::ArrayIndexContext *ctx);
+  void exitArrayIndex(AslParser::ArrayIndexContext *ctx);
+
+  void enterFuncCall(AslParser::FuncCallContext *ctx);
+  void exitFuncCall(AslParser::FuncCallContext *ctx);
+
   void enterUnary(AslParser::UnaryContext * ctx);
   void exitUnary(AslParser::UnaryContext * ctx);
 

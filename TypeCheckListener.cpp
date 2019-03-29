@@ -197,18 +197,89 @@ void TypeCheckListener::enterLeft_expr(AslParser::Left_exprContext *ctx) {
   DEBUG_ENTER();
 }
 void TypeCheckListener::exitLeft_expr(AslParser::Left_exprContext *ctx) {
+
   TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
+
+  // Left Expr is an array access 
+  if (ctx->expr() != NULL) {
+
+  }
+
   putTypeDecor(ctx, t1);
   bool b = getIsLValueDecor(ctx->ident());
   putIsLValueDecor(ctx, b);
+
   DEBUG_EXIT();
 }
 
-void TypeCheckListener::enterUnary(AslParser::UnaryContext * ctx) {
 
+void TypeCheckListener::enterArrayIndex(AslParser::ArrayIndexContext *ctx) {
+  DEBUG_ENTER();
+}
+void TypeCheckListener::exitArrayIndex(AslParser::ArrayIndexContext * ctx) {
+  // Declarem un Error i en cas que tot estigui en ordre prendra valor igual
+  // al tipus de l'array per fer el put
+  TypesMgr::TypeId tArr = Types.createErrorTy();
+
+  if (not Symbols.findInCurrentScope(ctx->ID()->getText()))
+    Errors.undeclaredIdent(ctx->ID());
+  
+  else {
+    
+    TypesMgr::TypeId t = getTypeDecor(ctx->expr());
+    TypesMgr::TypeId tID = Symbols.getType(ctx->ID()->getText());
+    
+    if (not Types.isArrayTy(tID))
+      Errors.nonArrayInArrayAccess(ctx);
+    
+    // tArr pren per valor el tipus de l'array en questio
+    else tArr = Types.getArrayElemType(tID); 
+      
+    if (not Types.isIntegerTy(t))
+      Errors.nonIntegerIndexInArrayAccess(ctx->expr());
+  }
+
+  putTypeDecor(ctx, tArr);
+  putIsLValueDecor(ctx, true);
+  DEBUG_EXIT();
+}
+
+
+void TypeCheckListener::enterFuncCall(AslParser::FuncCallContext * ctx) {
+  DEBUG_ENTER();
+}
+void TypeCheckListener::exitFuncCall(AslParser::FuncCallContext * ctx){
+  DEBUG_EXIT();
+}
+
+
+void TypeCheckListener::enterUnary(AslParser::UnaryContext * ctx) {
+  DEBUG_ENTER();
 }
 void TypeCheckListener::exitUnary(AslParser::UnaryContext * ctx) {
   
+  TypesMgr::TypeId t = getTypeDecor(ctx->expr());
+
+  if (ctx->NOT()) {
+    if (not Types.isErrorTy(t) and not Types.isBooleanTy(t))
+      Errors.incompatibleOperator(ctx->op);
+    t = Types.createBooleanTy();
+    putTypeDecor(ctx, t);
+  }
+
+  else {
+    if (not Types.isErrorTy(t) and (not Types.isIntegerTy(t)) and (not Types.isFloatTy(t)))
+      Errors.incompatibleOperator(ctx->op);
+    if (Types.isFloatTy(t))
+      putTypeDecor(ctx,t);
+    else {
+      t = Types.createIntegerTy();
+      putTypeDecor(ctx,t);
+    }
+  }
+
+  putIsLValueDecor(ctx, false);
+  DEBUG_EXIT();
 }
 
 
@@ -263,7 +334,7 @@ void TypeCheckListener::exitLogical(AslParser::LogicalContext * ctx) {
   TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
 
   if ((not Types.isErrorTy(t1)) and (not Types.isErrorTy(t2))) {
-    if (not Types.isBooleanTy(t1) or not Types.isBooleanTy(t2)) {
+    if ((not Types.isBooleanTy(t1)) or (not Types.isBooleanTy(t2))) {
       Errors.incompatibleOperator(ctx->op);
     }
   }
