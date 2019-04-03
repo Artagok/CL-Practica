@@ -198,14 +198,25 @@ void TypeCheckListener::enterLeft_expr(AslParser::Left_exprContext *ctx) {
 }
 void TypeCheckListener::exitLeft_expr(AslParser::Left_exprContext *ctx) {
 
-  TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
+  //TypesMgr::TypeId tArr = Types.createErrorTy();
+  TypesMgr::TypeId t;
+  TypesMgr::TypeId tID = getTypeDecor(ctx->ident());
 
   // Left Expr is an array access 
   if (ctx->expr() != NULL) {
+    
+    t = getTypeDecor(ctx->expr());
 
+    if (not Types.isArrayTy(tID))
+      Errors.nonArrayInArrayAccess(ctx);
+
+    //else tArr = Types.createArrayTy()
+
+    if (not Types.isIntegerTy(t))
+      Errors.nonIntegerIndexInArrayAccess(ctx->expr());
   }
 
-  putTypeDecor(ctx, t1);
+  putTypeDecor(ctx, tID);
   bool b = getIsLValueDecor(ctx->ident());
   putIsLValueDecor(ctx, b);
 
