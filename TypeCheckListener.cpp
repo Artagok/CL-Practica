@@ -259,7 +259,60 @@ void TypeCheckListener::exitArrayIndex(AslParser::ArrayIndexContext * ctx) {
 void TypeCheckListener::enterFuncCall(AslParser::FuncCallContext * ctx) {
   DEBUG_ENTER();
 }
-void TypeCheckListener::exitFuncCall(AslParser::FuncCallContext * ctx){
+// funcCall is an expr, meaning is a function not an action, so it RETURNS some value
+void TypeCheckListener::exitFuncCall(AslParser::FuncCallContext * ctx) {
+
+  // Already checked if ID is undeclared in exitIdent
+  TypesMgr::TypeId tID = getTypeDecor(ctx->ident());
+  // Si no es funcio farem put de Error
+  TypesMgr::TypeId t = Types.createErrorTy();
+
+  // Check if it is callable or not
+  if (not Types.isFunctionTy(tID)) {
+    Errors.isNotCallable(ctx->ident());
+  }
+
+  // Check if it is a procedure (action), meaning it cannot return
+  else if (Types.isVoidFunction(tID)) {
+    Errors.isNotFunction(ctx->ident());
+  }
+
+  // OK, tID is callable and a returning function
+  else {
+
+    // Check if #params in call matches function definition
+    if (Types.getNumOfParameters(tID) != (std::size_t) (ctx->expr()).size()) {
+      Errors.numberOfParameters(ctx->ident());
+    }
+
+    // Check if params are all of the expected type
+    else {
+
+      auto params = Types.getFuncParamsTypes(tID);
+      bool mistype = false;
+
+      for (uint i = 0; i < params.size() and !mistype; ++i) {
+        // We found a param that has different type
+        if (not Types.equalTypes(params[i], Types.getParameterType(tID, i))) {
+          mistype = true;
+          Errors.incompatibleParameter(ctx->expr(i), i+1, ctx);
+        }
+        // Maybe they were vectors, check their elem type to be equal as well
+        else if (Types.isArrayTy(params[i]) and not Types.equalTypes(Types.getArrayElemType(params[i]), 
+                                                                     Types.getArrayElemType(Types.getParameterType(tID,i))))
+        {
+          mistype = true;
+          Errors.incompatibleParameter(ctx->expr(i), i+1, ctx); // I assumed this error!
+        }
+      }
+
+    }
+    
+    t = Types.getFuncReturnType(tID);
+  }
+  
+  putTypeDecor(ctx, t);
+  putIsLValueDecor(ctx, false);
   DEBUG_EXIT();
 }
 
@@ -367,9 +420,9 @@ void TypeCheckListener::exitValue(AslParser::ValueContext *ctx) {
   
   if (ctx->INTVAL())        t = Types.createIntegerTy();
   else if (ctx->FLOATVAL()) t = Types.createFloatTy();
-  else if (ctx->BOOLVAL()) t = Types.createBooleanTy();
-  else if (ctx->CHARVAL()) t = Types.createCharacterTy();
-  else t = Types.createErrorTy();
+  else if (ctx->BOOLVAL())  t = Types.createBooleanTy();
+  else if (ctx->CHARVAL())  t = Types.createCharacterTy();
+  else                      t = Types.createErrorTy();
 
   putTypeDecor(ctx, t);
   putIsLValueDecor(ctx, false);
