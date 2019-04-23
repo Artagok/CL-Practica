@@ -201,23 +201,41 @@ void TypeCheckListener::exitLeft_expr(AslParser::Left_exprContext *ctx) {
   //TypesMgr::TypeId tArr = Types.createErrorTy();
   TypesMgr::TypeId t;
   TypesMgr::TypeId tID = getTypeDecor(ctx->ident());
+  bool b = getIsLValueDecor(ctx->ident());
 
   // Left Expr is an array access 
   if (ctx->expr() != NULL) {
     
     t = getTypeDecor(ctx->expr());
+    bool synt_valid = true;
 
-    if (not Types.isArrayTy(tID))
+    // tID is not an array
+    if (not Types.isArrayTy(tID)) {
       Errors.nonArrayInArrayAccess(ctx);
+      tID = Types.createErrorTy();
+      b = false;
+      synt_valid = false;
+    }
 
-    //else tArr = Types.createArrayTy()
-
-    if (not Types.isIntegerTy(t))
+    // indexing with a non-int
+    if (not Types.isIntegerTy(t)) {
       Errors.nonIntegerIndexInArrayAccess(ctx->expr());
+      synt_valid = false;
+      // I assume this is not a reason to carry up an error
+    }
+
+    // Sintactically valid array access [not necessarily sintactically valid]
+    if (synt_valid) {
+      tID = Types.getArrayElemType(tID);
+      b = true;
+    }
+  }
+
+  // Left Expr is NOT an array access
+  else {
   }
 
   putTypeDecor(ctx, tID);
-  bool b = getIsLValueDecor(ctx->ident());
   putIsLValueDecor(ctx, b);
 
   DEBUG_EXIT();

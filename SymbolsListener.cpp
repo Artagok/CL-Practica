@@ -95,6 +95,21 @@ void SymbolsListener::exitDeclarations(AslParser::DeclarationsContext *ctx) {
   DEBUG_EXIT();
 }
 
+void SymbolsListener::enterArray_decl(AslParser::Array_declContext * ctx) {
+  DEBUG_ENTER();
+}
+void SymbolsListener::exitArray_decl(AslParser::Array_declContext * ctx) {
+  
+  // Size of array
+  unsigned int size = std::stoi(ctx->INTVAL()->getText());
+  // Element type of array
+  TypesMgr::TypeId elemType = getTypeDecor(ctx->basic_type());
+
+  TypesMgr::TypeId t = Types.createArrayTy(size,elemType);
+  putTypeDecor(ctx, t);
+  DEBUG_EXIT();
+}
+
 void SymbolsListener::enterVariable_decl(AslParser::Variable_declContext *ctx) {
   DEBUG_ENTER();
 }
@@ -122,32 +137,28 @@ void SymbolsListener::enterType(AslParser::TypeContext *ctx) {
   DEBUG_ENTER();
 }
 void SymbolsListener::exitType(AslParser::TypeContext *ctx) {
-  if (ctx->basic_type()->INT()) {
-    TypesMgr::TypeId t = Types.createIntegerTy();
-    putTypeDecor(ctx, t);
-  }
-  else if (ctx->basic_type()->FLOAT()) {
-    TypesMgr::TypeId t = Types.createFloatTy();
-    putTypeDecor(ctx, t);
-  }
-  else if (ctx->basic_type()->BOOL()) {
-    TypesMgr::TypeId t = Types.createBooleanTy();
-    putTypeDecor(ctx, t);
-  }
-  else if (ctx->basic_type()->CHAR()) {
-    TypesMgr::TypeId t = Types.createCharacterTy();
-    putTypeDecor(ctx, t);
-  }
-  else {
-    unsigned int size = std::stoi(ctx->array_decl()->INTVAL()->getText());
-    TypesMgr::TypeId elemType;
-    if (ctx->array_decl()->basic_type()->INT())         elemType = Types.createIntegerTy();
-    else if (ctx->array_decl()->basic_type()->FLOAT())  elemType = Types.createFloatTy();
-    else if (ctx->array_decl()->basic_type()->BOOL())   elemType = Types.createBooleanTy();
-    else if (ctx->array_decl()->basic_type()->CHAR())   elemType = Types.createCharacterTy();
-    TypesMgr::TypeId t = Types.createArrayTy(size,elemType);
-    putTypeDecor(ctx, t);
-  }
+
+  if (ctx->basic_type())
+    putTypeDecor(ctx,getTypeDecor(ctx->basic_type()));
+  
+  else 
+    putTypeDecor(ctx,getTypeDecor(ctx->array_decl()));
+
+  DEBUG_EXIT();
+}
+
+void SymbolsListener::enterBasic_type(AslParser::Basic_typeContext *ctx) {
+  DEBUG_ENTER();
+}
+void SymbolsListener::exitBasic_type(AslParser::Basic_typeContext *ctx) {
+  
+  TypesMgr::TypeId  t = Types.createErrorTy();
+  if (ctx->INT())   t = Types.createIntegerTy();
+  if (ctx->FLOAT()) t = Types.createFloatTy();
+  if (ctx->BOOL())  t = Types.createBooleanTy();
+  if (ctx->CHAR())  t = Types.createCharacterTy();
+
+  putTypeDecor(ctx,t);
   DEBUG_EXIT();
 }
 

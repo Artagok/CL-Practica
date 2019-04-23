@@ -40,11 +40,17 @@ public:
   void enterDeclarations(AslParser::DeclarationsContext *ctx);
   void exitDeclarations(AslParser::DeclarationsContext *ctx);
 
+  void enterArray_decl(AslParser::Array_declContext * ctx);
+  void exitArray_decl(AslParser::Array_declContext * ctx);
+
   void enterVariable_decl(AslParser::Variable_declContext *ctx);
   void exitVariable_decl(AslParser::Variable_declContext *ctx);
 
   void enterType(AslParser::TypeContext *ctx);
   void exitType(AslParser::TypeContext *ctx);
+
+  void enterBasic_type(AslParser::Basic_typeContext *ctx);
+  void exitBasic_type(AslParser::Basic_typeContext *ctx);
 
   void enterStatements(AslParser::StatementsContext *ctx);
   void exitStatements(AslParser::StatementsContext *ctx);
