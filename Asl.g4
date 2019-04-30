@@ -71,7 +71,7 @@ left_expr
 
 // Grammar for expressions with boolean, relational and arithmetic operators
 expr    : '(' expr ')'                                            # parenthesis
-        | ID '[' expr ']'                                         # arrayIndex
+        | ident '[' expr ']'                                      # arrayIndex
         | ident '(' (expr (',' expr)*)? ')'                       # funcCall
         | op=(NOT|ADD|SUB) expr                                   # unary
         | expr op=(MUL|DIV|MOD) expr                              # arithmetic

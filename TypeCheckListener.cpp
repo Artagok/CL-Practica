@@ -231,10 +231,10 @@ void TypeCheckListener::exitLeft_expr(AslParser::Left_exprContext *ctx) {
   if (ctx->expr() != NULL) {
     
     t = getTypeDecor(ctx->expr());
-    bool synt_valid = true;
+    bool synt_valid = not Types.isErrorTy(tID);
 
     // tID is not an array
-    if (not Types.isArrayTy(tID)) {
+    if (not Types.isErrorTy(tID) and not Types.isArrayTy(tID)) {
       Errors.nonArrayInArrayAccess(ctx);
       tID = Types.createErrorTy();
       b = false;
@@ -242,7 +242,7 @@ void TypeCheckListener::exitLeft_expr(AslParser::Left_exprContext *ctx) {
     }
 
     // indexing with a non-int
-    if (not Types.isIntegerTy(t)) {
+    if (not Types.isErrorTy(t) and not Types.isIntegerTy(t)) {
       Errors.nonIntegerIndexInArrayAccess(ctx->expr());
       synt_valid = false;
       // I assume this is not a reason to carry up an error
@@ -274,23 +274,19 @@ void TypeCheckListener::exitArrayIndex(AslParser::ArrayIndexContext * ctx) {
   // al tipus de l'array per fer el put
   TypesMgr::TypeId tArr = Types.createErrorTy();
 
-  if (not Symbols.findInCurrentScope(ctx->ID()->getText()))
-    Errors.undeclaredIdent(ctx->ID());
+  TypesMgr::TypeId t = getTypeDecor(ctx->expr());
+  TypesMgr::TypeId tID = getTypeDecor(ctx->ident());
   
-  else {
-    
-    TypesMgr::TypeId t = getTypeDecor(ctx->expr());
-    TypesMgr::TypeId tID = Symbols.getType(ctx->ID()->getText());
-    
+  if (not Types.isErrorTy(tID)) {  
+  
     if (not Types.isArrayTy(tID))
-      Errors.nonArrayInArrayAccess(ctx);
-    
+      Errors.nonArrayInArrayAccess(ctx);  
     // tArr pren per valor el tipus de l'array en questio
     else tArr = Types.getArrayElemType(tID); 
-      
-    if (not Types.isIntegerTy(t))
-      Errors.nonIntegerIndexInArrayAccess(ctx->expr());
   }
+
+  if (not Types.isErrorTy(t) and not Types.isIntegerTy(t))
+    Errors.nonIntegerIndexInArrayAccess(ctx->expr());  
 
   putTypeDecor(ctx, tArr);
   putIsLValueDecor(ctx, true);
@@ -331,19 +327,16 @@ void TypeCheckListener::exitFuncCall(AslParser::FuncCallContext * ctx) {
     else {
 
       auto params = Types.getFuncParamsTypes(tID);
-      bool mistype = false;
 
-      for (uint i = 0; i < params.size() and !mistype; ++i) {
+      for (uint i = 0; i < params.size(); ++i) {
         // We found a param that has different type
-        if (not Types.equalTypes(params[i], Types.getParameterType(tID, i))) {
-          mistype = true;
+        if (not Types.equalTypes(params[i], getTypeDecor(ctx->expr(i)))) {
           Errors.incompatibleParameter(ctx->expr(i), i+1, ctx);
         }
         // Maybe they were vectors, check their elem type to be equal as well
         else if (Types.isArrayTy(params[i]) and not Types.equalTypes(Types.getArrayElemType(params[i]), 
                                                                      Types.getArrayElemType(Types.getParameterType(tID,i))))
         {
-          mistype = true;
           Errors.incompatibleParameter(ctx->expr(i), i+1, ctx); // I assumed this error!
         }
       }
