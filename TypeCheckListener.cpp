@@ -44,6 +44,14 @@ void TypeCheckListener::exitProgram(AslParser::ProgramContext *ctx) {
 
 void TypeCheckListener::enterFunction(AslParser::FunctionContext *ctx) {
   DEBUG_ENTER();
+
+  TypesMgr::TypeId tRet; // RETURN type
+  if (ctx->basic_type() != NULL)
+    tRet = getTypeDecor(ctx->basic_type());
+  else 
+    tRet = Types.createVoidTy();
+  Symbols.setCurrentFunctionTy(tRet);
+
   SymTable::ScopeId sc = getScopeDecor(ctx);
   Symbols.pushThisScope(sc);
   // Symbols.print();
@@ -146,17 +154,33 @@ void TypeCheckListener::enterReturnStmt(AslParser::ReturnStmtContext * ctx) {
 }
 void TypeCheckListener::exitReturnStmt(AslParser::ReturnStmtContext * ctx) {
 
+  // Returning SOMETHING
   if (ctx->expr() != NULL) {
-
+   // std::cout << "Func type: " << Types.to_string(Symbols.getCurrentFunctionTy()) << std::endl;
     TypesMgr::TypeId t1 = getTypeDecor(ctx->expr());
-    
+   // std::cout << "Expr type: " << Types.to_string(t1) << std::endl;
+  
     // return type is Non-Primitive
     if (not Types.isErrorTy(t1) and not Types.isPrimitiveNonVoidTy(t1))
       Errors.incompatibleReturn(ctx->RETURN());
 
     // return type does not match
+    else if (not Types.isErrorTy(t1) and not Types.equalTypes(t1, Symbols.getCurrentFunctionTy())) {
+      if (not (Types.equalTypes(Types.createFloatTy(), Symbols.getCurrentFunctionTy()) and 
+               Types.equalTypes(Types.createIntegerTy(), t1)))
+        Errors.incompatibleReturn(ctx->RETURN());
+    }
 
     // function was void
+    else if (not Types.isErrorTy(t1) and Types.equalTypes(Types.createVoidTy(),Symbols.getCurrentFunctionTy()))
+      Errors.incompatibleReturn(ctx->RETURN());
+  }
+
+  // Returning VOID
+  else {
+    
+    if (not Types.equalTypes(Types.createVoidTy(), Symbols.getCurrentFunctionTy()))
+      Errors.incompatibleReturn(ctx->RETURN());
   }
 
   DEBUG_EXIT();

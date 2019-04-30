@@ -57,16 +57,13 @@ void SymbolsListener::exitFunction(AslParser::FunctionContext *ctx) {
   }
   else {
   
-    TypesMgr::TypeId tRet; // return type
-    if (ctx->basic_type() != NULL) {
-      if      (ctx->basic_type()->INT())    tRet = Types.createIntegerTy();
-      else if (ctx->basic_type()->FLOAT())  tRet = Types.createFloatTy();
-      else if (ctx->basic_type()->BOOL())   tRet = Types.createBooleanTy();
-      else if (ctx->basic_type()->CHAR())   tRet = Types.createCharacterTy();
-    }
-    else                                    tRet = Types.createVoidTy();
+    TypesMgr::TypeId tRet; // RETURN type
+    if (ctx->basic_type() != NULL)
+      tRet = getTypeDecor(ctx->basic_type());
+    else 
+      tRet = Types.createVoidTy();
 
-    std::vector<TypesMgr::TypeId> lParamsTy; // parameter types
+    std::vector<TypesMgr::TypeId> lParamsTy; // PARAMETER types
     for (auto i : ctx->func_decl_params()->type()) {
       lParamsTy.push_back(getTypeDecor(i));
     } 
