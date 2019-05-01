@@ -140,12 +140,44 @@ void TypeCheckListener::enterProcCall(AslParser::ProcCallContext *ctx) {
   DEBUG_ENTER();
 }
 void TypeCheckListener::exitProcCall(AslParser::ProcCallContext *ctx) {
-  
-  TypesMgr::TypeId t1 = getTypeDecor(ctx->ident());
-  // t1 is not a function, so it is not callable
-  if (not Types.isFunctionTy(t1) and not Types.isErrorTy(t1)) {
+
+  // Already checked if ID is undeclared in exitIdent
+  TypesMgr::TypeId tID = getTypeDecor(ctx->ident());
+
+  // Check if it is callable or not
+  if (not Types.isErrorTy(tID) and not Types.isFunctionTy(tID)) {
     Errors.isNotCallable(ctx->ident());
   }
+
+  // OK, tID is callable
+  else if (not Types.isErrorTy(tID)) {
+
+    // Check if #params in call matches function definition
+    if (Types.getNumOfParameters(tID) != (std::size_t) (ctx->expr()).size()) {
+      Errors.numberOfParameters(ctx->ident());
+    }
+
+    // Check if params are all of the expected type
+    else {
+
+      auto params = Types.getFuncParamsTypes(tID);
+
+      for (uint i = 0; i < params.size(); ++i) {
+        // We found a param that has different type
+        if (not Types.equalTypes(params[i], getTypeDecor(ctx->expr(i)))) {
+          Errors.incompatibleParameter(ctx->expr(i), i+1, ctx);
+        }
+        /* Maybe they were vectors, check their elem type to be equal as well || En principi aquest bloc no cal, equalTypes compara be arrays
+        else if (Types.isArrayTy(params[i]) and not Types.equalTypes(Types.getArrayElemType(params[i]), 
+                                                                     Types.getArrayElemType(Types.getParameterType(tID,i))))
+        {
+          Errors.incompatibleParameter(ctx->expr(i), i+1, ctx); // I assumed this error!
+        }*/
+      }
+    }
+  }
+  
+  putIsLValueDecor(ctx, false);
   DEBUG_EXIT();
 }
 
@@ -300,7 +332,7 @@ void TypeCheckListener::enterFuncCall(AslParser::FuncCallContext * ctx) {
 // funcCall is an expr, meaning is a function not an action, so it RETURNS some value
 void TypeCheckListener::exitFuncCall(AslParser::FuncCallContext * ctx) {
 
-  // Already checked if ID is undeclared in exitIdent
+  // Already checked if ID is undeclared in exitIdent || Aqui potser falta comprovar que tID no sigui error (com es fa a procCall)
   TypesMgr::TypeId tID = getTypeDecor(ctx->ident());
   // Si no es funcio farem put de Error
   TypesMgr::TypeId t = Types.createErrorTy();
@@ -333,14 +365,13 @@ void TypeCheckListener::exitFuncCall(AslParser::FuncCallContext * ctx) {
         if (not Types.equalTypes(params[i], getTypeDecor(ctx->expr(i)))) {
           Errors.incompatibleParameter(ctx->expr(i), i+1, ctx);
         }
-        // Maybe they were vectors, check their elem type to be equal as well
+        /* Maybe they were vectors, check their elem type to be equal as well || aquest bloc no cal, en principi equalTypes compara be arrays
         else if (Types.isArrayTy(params[i]) and not Types.equalTypes(Types.getArrayElemType(params[i]), 
                                                                      Types.getArrayElemType(Types.getParameterType(tID,i))))
         {
           Errors.incompatibleParameter(ctx->expr(i), i+1, ctx); // I assumed this error!
-        }
+        }*/
       }
-
     }
     
     t = Types.getFuncReturnType(tID);
@@ -388,14 +419,22 @@ void TypeCheckListener::enterArithmetic(AslParser::ArithmeticContext *ctx) {
 }
 void TypeCheckListener::exitArithmetic(AslParser::ArithmeticContext *ctx) {
 
+  std::string oper = ctx->op->getText();
   TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(0));
   TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
   TypesMgr::TypeId t;
 
-  if (((not Types.isErrorTy(t1)) and (not Types.isNumericTy(t1))) or
+// Special case for % (mod) operation, t1 & t2 must be integers
+  if (oper == "%") {
+    if ((not Types.isErrorTy(t1) and not Types.isIntegerTy(t1)) or 
+        (not Types.isErrorTy(t2) and not Types.isIntegerTy(t2)))
+    Errors.incompatibleOperator(ctx->op);
+  }
+  
+  else if (((not Types.isErrorTy(t1)) and (not Types.isNumericTy(t1))) or
       ((not Types.isErrorTy(t2)) and (not Types.isNumericTy(t2))))
     Errors.incompatibleOperator(ctx->op);
-  
+
   if (Types.isFloatTy(t1) or Types.isFloatTy(t2)) t = Types.createFloatTy();
   else t = Types.createIntegerTy();
   
