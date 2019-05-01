@@ -165,7 +165,8 @@ void TypeCheckListener::exitProcCall(AslParser::ProcCallContext *ctx) {
       for (uint i = 0; i < params.size(); ++i) {
         // We found a param that has different type
         if (not Types.equalTypes(params[i], getTypeDecor(ctx->expr(i)))) {
-          Errors.incompatibleParameter(ctx->expr(i), i+1, ctx);
+          if (not (Types.isFloatTy(params[i]) and Types.isIntegerTy(getTypeDecor(ctx->expr(i)))))
+            Errors.incompatibleParameter(ctx->expr(i), i+1, ctx);
         }
         /* Maybe they were vectors, check their elem type to be equal as well || En principi aquest bloc no cal, equalTypes compara be arrays
         else if (Types.isArrayTy(params[i]) and not Types.equalTypes(Types.getArrayElemType(params[i]), 
@@ -342,13 +343,16 @@ void TypeCheckListener::exitFuncCall(AslParser::FuncCallContext * ctx) {
     Errors.isNotCallable(ctx->ident());
   }
 
-  // Check if it is a procedure (action), meaning it cannot return
-  else if (Types.isVoidFunction(tID)) {
-    Errors.isNotFunction(ctx->ident());
-  }
-
-  // OK, tID is callable and a returning function
+  // Callable
   else {
+
+    t = Types.getFuncReturnType(tID);
+
+    // Check if it is a procedure (action), meaning it cannot return
+    if (Types.isVoidFunction(tID)) {
+      Errors.isNotFunction(ctx->ident());
+      t = Types.createErrorTy();
+    }
 
     // Check if #params in call matches function definition
     if (Types.getNumOfParameters(tID) != (std::size_t) (ctx->expr()).size()) {
@@ -363,7 +367,8 @@ void TypeCheckListener::exitFuncCall(AslParser::FuncCallContext * ctx) {
       for (uint i = 0; i < params.size(); ++i) {
         // We found a param that has different type
         if (not Types.equalTypes(params[i], getTypeDecor(ctx->expr(i)))) {
-          Errors.incompatibleParameter(ctx->expr(i), i+1, ctx);
+          if (not (Types.isFloatTy(params[i]) and Types.isIntegerTy(getTypeDecor(ctx->expr(i)))))
+            Errors.incompatibleParameter(ctx->expr(i), i+1, ctx);
         }
         /* Maybe they were vectors, check their elem type to be equal as well || aquest bloc no cal, en principi equalTypes compara be arrays
         else if (Types.isArrayTy(params[i]) and not Types.equalTypes(Types.getArrayElemType(params[i]), 
@@ -373,10 +378,7 @@ void TypeCheckListener::exitFuncCall(AslParser::FuncCallContext * ctx) {
         }*/
       }
     }
-    
-    t = Types.getFuncReturnType(tID);
   }
-  
   putTypeDecor(ctx, t);
   putIsLValueDecor(ctx, false);
   DEBUG_EXIT();
