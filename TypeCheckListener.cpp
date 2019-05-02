@@ -421,13 +421,12 @@ void TypeCheckListener::enterArithmetic(AslParser::ArithmeticContext *ctx) {
 }
 void TypeCheckListener::exitArithmetic(AslParser::ArithmeticContext *ctx) {
 
-  std::string oper = ctx->op->getText();
   TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(0));
   TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
   TypesMgr::TypeId t;
 
 // Special case for % (mod) operation, t1 & t2 must be integers
-  if (oper == "%") {
+  if (ctx->MOD()) {
     if ((not Types.isErrorTy(t1) and not Types.isIntegerTy(t1)) or 
         (not Types.isErrorTy(t2) and not Types.isIntegerTy(t2)))
     Errors.incompatibleOperator(ctx->op);
@@ -437,7 +436,8 @@ void TypeCheckListener::exitArithmetic(AslParser::ArithmeticContext *ctx) {
       ((not Types.isErrorTy(t2)) and (not Types.isNumericTy(t2))))
     Errors.incompatibleOperator(ctx->op);
 
-  if (Types.isFloatTy(t1) or Types.isFloatTy(t2)) t = Types.createFloatTy();
+  if (ctx->MOD()) t = Types.createIntegerTy();
+  else if (Types.isFloatTy(t1) or Types.isFloatTy(t2)) t = Types.createFloatTy();
   else t = Types.createIntegerTy();
   
   putTypeDecor(ctx, t); // t is either a Float or an Int always
