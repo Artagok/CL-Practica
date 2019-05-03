@@ -24,10 +24,16 @@ check_type() {
 
 gen_code() {
 
-    ../tvm/tvm <(./asl $ruta$fitxer) < $ruta$nom_fitxer$_in > out.temp
-    diff $ruta$nom_fitxer$_out out.temp > diff.temp
+    if [[ $nom_fitxer =~ basic ]]
+    then
+        ./asl $ruta$fitxer | egrep -v '^\(' > tcode.temp
+    else 
+        ./asl $ruta$fitxer > tcode.temp
+    fi
+
+    diff $ruta$nom_fitxer$_t tcode.temp > diff.temp
     [[ $? == 0 ]] &&
-        echo -e "${green_color}OK: NO DIFF!${no_color}\n" ||
+        echo -e "${green_color}OK: NO TCODE DIFF!${no_color}\n" ||
         echo -e "${red_color}$(cat diff.temp)${no_color}\n"
 }
 
@@ -45,13 +51,18 @@ print_verbose_mode() {
 
     if [[ $nom_fitxer =~ genc ]]
     then 
-        echo "Not implemented yet!"
+        echo -e "${separator} INPUT ${separator}\n"
+        cat -n $ruta$fitxer; echo;
+        echo -e "${separator} EXPECTED t-CODE ${separator}\n"
+        cat -n $ruta$nom_fitxer$_t; echo;
+        echo -e "${separator} YOUR t-CODE ${separator}\n"
+        cat -n tcode.temp; echo;
     fi
 }
 
 clean() {
 
-    rm -f out.temp diff.temp
+    rm -f *.temp
 }
 
 echo "It is assumed you are running the script inside asl folder, paths are relative"
