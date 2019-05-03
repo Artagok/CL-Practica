@@ -1,32 +1,3 @@
-//////////////////////////////////////////////////////////////////////
-//
-//    CodeGenListener - Walk the parser tree to do
-//                             the generation of code
-//
-//    Copyright (C) 2018  Universitat Politecnica de Catalunya
-//
-//    This library is free software; you can redistribute it and/or
-//    modify it under the terms of the GNU General Public License
-//    as published by the Free Software Foundation; either version 3
-//    of the License, or (at your option) any later version.
-//
-//    This library is distributed in the hope that it will be useful,
-//    but WITHOUT ANY WARRANTY; without even the implied warranty of
-//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-//    Affero General Public License for more details.
-//
-//    You should have received a copy of the GNU Affero General Public
-//    License along with this library; if not, write to the Free Software
-//    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
-//    contact: José Miguel Rivero (rivero@cs.upc.edu)
-//             Computer Science Department
-//             Universitat Politecnica de Catalunya
-//             despatx Omega.110 - Campus Nord UPC
-//             08034 Barcelona.  SPAIN
-//
-//////////////////////////////////////////////////////////////////////
-
 #include "CodeGenListener.h"
 
 #include "antlr4-runtime.h"
@@ -96,10 +67,12 @@ void CodeGenListener::enterVariable_decl(AslParser::Variable_declContext *ctx) {
 
 
 void CodeGenListener::exitVariable_decl(AslParser::Variable_declContext *ctx) {
- /* subroutine       & subrRef = Code.get_last_subroutine();
-  TypesMgr::TypeId        t1 = getTypeDecor(ctx->type());
-  std::size_t           size = Types.getSizeOfType(t1);
-  subrRef.add_var(ctx->ID()->getText(), size); */
+  for (auto i : ctx->ID()) {
+    subroutine       & subrRef = Code.get_last_subroutine();
+    TypesMgr::TypeId        t1 = getTypeDecor(ctx->type());
+    std::size_t           size = Types.getSizeOfType(t1);
+    subrRef.add_var(i->getText(), size);
+  }
   DEBUG_EXIT();
 } 
 
@@ -145,16 +118,33 @@ void CodeGenListener::enterIfStmt(AslParser::IfStmtContext *ctx) {
 }
 
 void CodeGenListener::exitIfStmt(AslParser::IfStmtContext *ctx) {
-  /*
-  instructionList   code;
-  std::string      addr1 = getAddrDecor(ctx->expr());
-  instructionList  code1 = getCodeDecor(ctx->expr());
-  instructionList  code2 = getCodeDecor(ctx->statements());
-  std::string      label = codeCounters.newLabelIF();
-  std::string labelEndIf = "endif"+label;
-  code = code1 || instruction::FJUMP(addr1, labelEndIf) ||
-         code2 || instruction::LABEL(labelEndIf);
-  putCodeDecor(ctx, code); */
+  // IF expr THEN statements(0) [ELSE statements(1)] ENDIF
+  instructionList  code;
+  std::string      addrExpr = getAddrDecor(ctx->expr());        // addr if(expr)
+  instructionList  codeExpr = getCodeDecor(ctx->expr());        // code if(expr)
+  instructionList  codeS0   = getCodeDecor(ctx->statements(0)); // code statements(0)
+
+  std::string labelIf    = codeCounters.newLabelIF();   //  1
+  std::string labelEndIf = "endif"+labelIf;             // endif1
+
+  // IF ELSE
+  if (ctx->ELSE()) {
+
+    instructionList codeS1    = getCodeDecor(ctx->statements(1)); // code statements(1)
+    std::string     labelElse = "else"+labelIf;   // else1
+
+    code =  codeExpr || instruction::FJUMP(addrExpr, labelElse) ||
+            codeS0 || instruction::UJUMP(labelEndIf) || instruction::LABEL(labelElse) ||
+            codeS1 || instruction::LABEL(labelEndIf);
+  }
+  // IF
+  else {
+
+    code =  codeExpr || instruction::FJUMP(addrExpr, labelEndIf) ||
+            codeS0 || instruction::LABEL(labelEndIf);
+  }
+
+  putCodeDecor(ctx, code);
   DEBUG_EXIT();
 }
 
