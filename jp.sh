@@ -33,7 +33,7 @@ gen_code() {
 
     diff $ruta$nom_fitxer$_t tcode.temp > diff.temp
     [[ $? == 0 ]] &&
-        echo -e "${green_color}OK: NO TCODE DIFF!${no_color}\n" ||
+        echo -e "${green_color}OK: NO t-CODE DIFF!${no_color}\n" ||
         echo -e "${red_color}$(cat diff.temp)${no_color}\n"
 }
 
