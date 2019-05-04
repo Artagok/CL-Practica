@@ -304,19 +304,55 @@ void CodeGenListener::enterRelational(AslParser::RelationalContext *ctx) {
   DEBUG_ENTER();
 }
 void CodeGenListener::exitRelational(AslParser::RelationalContext *ctx) {
-  std::string     addr1 = getAddrDecor(ctx->expr(0));
-  instructionList code1 = getCodeDecor(ctx->expr(0));
-  std::string     addr2 = getAddrDecor(ctx->expr(1));
-  instructionList code2 = getCodeDecor(ctx->expr(1));
-  instructionList code  = code1 || code2;
-  // TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(0));
-  // TypesMgr::TypeId t2 = getTypeDecor(ctx->expr(1));
-  // TypesMgr::TypeId t  = getTypeDecor(ctx);
+  
+  std::string     addrE0 = getAddrDecor(ctx->expr(0));
+  instructionList codeE0 = getCodeDecor(ctx->expr(0));
+  std::string     addrE1 = getAddrDecor(ctx->expr(1));
+  instructionList codeE1 = getCodeDecor(ctx->expr(1));
+  instructionList code  = codeE0 || codeE1;
+
+  TypesMgr::TypeId t0 = getTypeDecor(ctx->expr(0));
+  TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(1));
+  TypesMgr::TypeId t  = getTypeDecor(ctx);
+
   std::string temp = "%"+codeCounters.newTEMP();
-  code = code || instruction::EQ(temp, addr1, addr2);
+
+  // INT or CHAR or BOOL
+  if (not Types.isFloatTy(t)) {
+
+    if (ctx->EQ())        code = code || instruction::EQ(temp, addrE0, addrE1);
+    else if (ctx->NEQ())  code = code || instruction::EQ(temp, addrE0, addrE1) || instruction::NOT(temp, temp);
+    else if (ctx->LT())   code = code || instruction::LT(temp, addrE0, addrE1);
+    else if (ctx->LTE())  code = code || instruction::LE(temp, addrE0, addrE1);
+    else if (ctx->GT())   code = code || instruction::LE(temp, addrE0, addrE1) || instruction::NOT(temp, temp);
+    else /*ctx->GTE()*/   code = code || instruction::LT(temp, addrE0, addrE1) || instruction::NOT(temp, temp);
+  }
+
+  // FLOAT
+  else {
+
+    std::string tempF = "%"+codeCounters.newTEMP(); // stores the temporal FLOAT cast
+    instruction cast = Types.isIntegerTy(t0) ? instruction::FLOAT(tempF, addrE0) :
+                                               instruction::FLOAT(tempF, addrE1) ;
+
+    if (ctx->EQ())        code = code || cast || instruction::EQ(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
+                                                                       Types.isIntegerTy(t1) ? tempF : addrE1);
+    else if (ctx->NEQ())  code = code || cast || instruction::EQ(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
+                                                                       Types.isIntegerTy(t1) ? tempF : addrE1) || instruction::NOT(temp, temp);
+    else if (ctx->LT())   code = code || cast || instruction::LT(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
+                                                                       Types.isIntegerTy(t1) ? tempF : addrE1);
+    else if (ctx->LTE())  code = code || cast || instruction::LE(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
+                                                                       Types.isIntegerTy(t1) ? tempF : addrE1);
+    else if (ctx->GT())   code = code || cast || instruction::LE(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
+                                                                       Types.isIntegerTy(t1) ? tempF : addrE1) || instruction::NOT(temp, temp);
+    else /*ctx->GTE()*/   code = code || cast || instruction::LT(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
+                                                                       Types.isIntegerTy(t1) ? tempF : addrE1) || instruction::NOT(temp, temp);
+  }
+
   putAddrDecor(ctx, temp);
   putOffsetDecor(ctx, "");
   putCodeDecor(ctx, code);
+
   DEBUG_EXIT();
 }
 
