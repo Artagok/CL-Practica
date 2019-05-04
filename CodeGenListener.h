@@ -110,6 +110,9 @@ public:
   void enterValue(AslParser::ValueContext *ctx);
   void exitValue(AslParser::ValueContext *ctx);
 
+  void enterParenthesis(AslParser::ParenthesisContext * ctx);
+  void exitParenthesis(AslParser::ParenthesisContext * ctx);
+
   void enterExprIdent(AslParser::ExprIdentContext *ctx);
   void exitExprIdent(AslParser::ExprIdentContext *ctx);
 

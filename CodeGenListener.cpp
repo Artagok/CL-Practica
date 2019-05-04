@@ -333,6 +333,16 @@ void CodeGenListener::exitValue(AslParser::ValueContext *ctx) {
   DEBUG_EXIT();
 }
 
+void CodeGenListener::enterParenthesis(AslParser::ParenthesisContext * ctx) {
+  DEBUG_ENTER();
+}
+void CodeGenListener::exitParenthesis(AslParser::ParenthesisContext * ctx) {
+  putAddrDecor(ctx, getAddrDecor(ctx->expr()));
+  putOffsetDecor(ctx, getOffsetDecor(ctx->expr()));
+  putCodeDecor(ctx, getCodeDecor(ctx->expr()));
+  DEBUG_EXIT();
+}
+
 void CodeGenListener::enterExprIdent(AslParser::ExprIdentContext *ctx) {
   DEBUG_ENTER();
 }
