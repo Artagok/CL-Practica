@@ -148,6 +148,26 @@ void CodeGenListener::exitIfStmt(AslParser::IfStmtContext *ctx) {
   DEBUG_EXIT();
 }
 
+void CodeGenListener::enterWhileStmt(AslParser::WhileStmtContext * ctx) {
+  DEBUG_ENTER();
+}
+void CodeGenListener::exitWhileStmt(AslParser::WhileStmtContext * ctx) {
+  
+  instructionList code;
+  std::string     addrE = getAddrDecor(ctx->expr());
+  instructionList codeE = getCodeDecor(ctx->expr());
+  instructionList codeS = getCodeDecor(ctx->statements());
+
+  std::string     labelWhile    = "while"+codeCounters.newLabelWHILE();
+  std::string     labelEndWhile = "end"+labelWhile;
+
+  code =  instruction::LABEL(labelWhile) || codeE || instruction::FJUMP(addrE, labelEndWhile) ||
+          codeS || instruction::UJUMP(labelWhile) || instruction::LABEL(labelEndWhile);
+  
+  putCodeDecor(ctx, code);
+  DEBUG_EXIT();
+}
+
 void CodeGenListener::enterProcCall(AslParser::ProcCallContext *ctx) {
   DEBUG_ENTER();
 }
