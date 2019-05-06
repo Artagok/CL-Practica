@@ -237,6 +237,28 @@ void CodeGenListener::exitLeft_expr(AslParser::Left_exprContext *ctx) {
   DEBUG_ENTER();
 }
 
+
+void CodeGenListener::enterUnary(AslParser::UnaryContext * ctx) {
+  DEBUG_ENTER();
+}
+void CodeGenListener::exitUnary(AslParser::UnaryContext * ctx) {
+  
+  std::string     addrE = getAddrDecor(ctx->expr());
+  instructionList codeE = getCodeDecor(ctx->expr());
+  instructionList code  = codeE;
+
+  std::string temp = "%"+codeCounters.newTEMP();
+
+  if (ctx->NOT())       code = code || instruction::NOT(temp, addrE);
+  else if (ctx->SUB())  code = code || instruction::NEG(temp, addrE);
+
+  putAddrDecor(ctx, temp);
+  putOffsetDecor(ctx, "");
+  putCodeDecor(ctx, code);
+  
+  DEBUG_EXIT();
+}
+
 void CodeGenListener::enterArithmetic(AslParser::ArithmeticContext *ctx) {
   DEBUG_ENTER();
 }
@@ -376,6 +398,29 @@ void CodeGenListener::exitParenthesis(AslParser::ParenthesisContext * ctx) {
   putAddrDecor(ctx, getAddrDecor(ctx->expr()));
   putOffsetDecor(ctx, getOffsetDecor(ctx->expr()));
   putCodeDecor(ctx, getCodeDecor(ctx->expr()));
+  DEBUG_EXIT();
+}
+
+void CodeGenListener::enterLogical(AslParser::LogicalContext * ctx) {
+    DEBUG_ENTER();
+}
+void CodeGenListener::exitLogical(AslParser::LogicalContext * ctx) {
+  
+  std::string     addrE0 = getAddrDecor(ctx->expr(0));
+  instructionList codeE0 = getCodeDecor(ctx->expr(0));
+  std::string     addrE1 = getAddrDecor(ctx->expr(1));
+  instructionList codeE1 = getCodeDecor(ctx->expr(1));
+  instructionList code  = codeE0 || codeE1;
+
+  std::string temp = "%"+codeCounters.newTEMP();
+
+  if (ctx->AND())     code = code || instruction::AND(temp, addrE0, addrE1);
+  else /*ctx->OR()*/  code = code || instruction::OR(temp, addrE0, addrE1);
+
+  putAddrDecor(ctx, temp);
+  putOffsetDecor(ctx, "");
+  putCodeDecor(ctx, code);
+
   DEBUG_EXIT();
 }
 
