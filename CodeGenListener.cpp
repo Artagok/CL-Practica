@@ -397,12 +397,19 @@ void CodeGenListener::enterValue(AslParser::ValueContext *ctx) {
   DEBUG_ENTER();
 }
 void CodeGenListener::exitValue(AslParser::ValueContext *ctx) {
+  
   instructionList code;
   std::string temp = "%"+codeCounters.newTEMP();
-  code = instruction::ILOAD(temp, ctx->getText());
+
+  if (ctx->INTVAL())        code = instruction::ILOAD(temp, ctx->getText());
+  else if (ctx->FLOATVAL()) code = instruction::FLOAD(temp, ctx->getText());
+  else if (ctx->CHARVAL())  code = instruction::CHLOAD(temp, ctx->getText());
+  else /* ctx->BOOLVAL() */ code = instruction::LOAD(temp, (ctx->getText()=="true" ? "1":"0"));
+
   putAddrDecor(ctx, temp);
   putOffsetDecor(ctx, "");
   putCodeDecor(ctx, code);
+
   DEBUG_EXIT();
 }
 
