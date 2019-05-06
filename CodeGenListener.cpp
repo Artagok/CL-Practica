@@ -178,12 +178,21 @@ void CodeGenListener::enterWriteExpr(AslParser::WriteExprContext *ctx) {
   DEBUG_ENTER();
 }
 void CodeGenListener::exitWriteExpr(AslParser::WriteExprContext *ctx) {
+  
   instructionList code;
-  std::string     addr1 = getAddrDecor(ctx->expr());
+  std::string     addrE = getAddrDecor(ctx->expr());
   // std::string     offs1 = getOffsetDecor(ctx->expr());
-  instructionList code1 = getCodeDecor(ctx->expr());
-  // TypesMgr::TypeId tid1 = getTypeDecor(ctx->expr());
-  code = code1 || instruction::WRITEI(addr1);
+  instructionList codeE = getCodeDecor(ctx->expr());
+
+  TypesMgr::TypeId t = getTypeDecor(ctx->expr());
+
+  if (Types.isIntegerTy(t) or Types.isBooleanTy(t))
+    code = codeE || instruction::WRITEI(addrE);
+  else if (Types.isFloatTy(t))
+    code = codeE || instruction::WRITEF(addrE);
+  else  /* isCharacterTy(t) */
+    code = codeE || instruction::WRITEC(addrE);
+
   putCodeDecor(ctx, code);
   DEBUG_EXIT();
 }
@@ -247,10 +256,12 @@ void CodeGenListener::exitUnary(AslParser::UnaryContext * ctx) {
   instructionList codeE = getCodeDecor(ctx->expr());
   instructionList code  = codeE;
 
-  std::string temp = "%"+codeCounters.newTEMP();
+  TypesMgr::TypeId t  = getTypeDecor(ctx->expr());
+  std::string temp    = "%"+codeCounters.newTEMP();
 
   if (ctx->NOT())       code = code || instruction::NOT(temp, addrE);
-  else if (ctx->SUB())  code = code || instruction::NEG(temp, addrE);
+  else if (ctx->SUB())  code = code || (Types.isFloatTy(t) ? instruction::FNEG(temp, addrE) :
+                                                             instruction::NEG(temp, addrE)) ;
 
   putAddrDecor(ctx, temp);
   putOffsetDecor(ctx, "");
@@ -275,44 +286,48 @@ void CodeGenListener::exitArithmetic(AslParser::ArithmeticContext *ctx) {
   TypesMgr::TypeId t0 = getTypeDecor(ctx->expr(0));
   TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(1));
   TypesMgr::TypeId t  = getTypeDecor(ctx);
-  
-  std::string temp = "%"+codeCounters.newTEMP();
+
+  // stores the temporal FLOAT cast if isFloat(t0) XOR isFloat(t1)
+  bool floatXor     = Types.isFloatTy(t0) != Types.isFloatTy(t1);
+  std::string tempF = floatXor ? "%"+codeCounters.newTEMP() : "";
+  std::string temp  = "%"+codeCounters.newTEMP();
 
   // INTEGER
   if (Types.isIntegerTy(t)) {
     
-    if (ctx->MUL())
-      code = code || instruction::MUL(temp, addrE0, addrE1);
-    else if (ctx->ADD())
-      code = code || instruction::ADD(temp, addrE0, addrE1);
-    else if (ctx->DIV())
-      code = code || instruction::DIV(temp, addrE0, addrE1);
-    else if (ctx->SUB())
-      code = code || instruction::SUB(temp, addrE0, addrE1);
+    if (ctx->MUL())       code = code || instruction::MUL(temp, addrE0, addrE1);
+    else if (ctx->ADD())  code = code || instruction::ADD(temp, addrE0, addrE1);
+    else if (ctx->DIV())  code = code || instruction::DIV(temp, addrE0, addrE1);
+    else if (ctx->SUB())  code = code || instruction::SUB(temp, addrE0, addrE1);
     else { // ctx->MOD()
-
     }
   }
 
-  // FLOAT
+  // FLOAT [MOD not possible with FLOAT]
   else {
 
-    std::string tempF = "%"+codeCounters.newTEMP(); // stores the temporal FLOAT cast
     instruction cast = Types.isIntegerTy(t0) ? instruction::FLOAT(tempF, addrE0) :
                                                instruction::FLOAT(tempF, addrE1) ;
-    if (ctx->MUL())
-      code = code || cast || instruction::FMUL(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
-                                                     Types.isIntegerTy(t1) ? tempF : addrE1);
-    else if (ctx->ADD())
-      code = code || cast || instruction::FADD(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
-                                                     Types.isIntegerTy(t1) ? tempF : addrE1);
-    else if (ctx->DIV())
-      code = code || cast || instruction::FDIV(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
-                                                     Types.isIntegerTy(t1) ? tempF : addrE1);
-    else // ctx->SUB()
-      code = code || cast || instruction::FSUB(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
-                                                     Types.isIntegerTy(t1) ? tempF : addrE1);
-    // ctx->MOD() not possible with FLOAT
+    // One FLOAT but NOT both
+    if (floatXor) {
+
+      if (ctx->MUL())       code = code || cast || instruction::FMUL(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
+                                                                           Types.isIntegerTy(t1) ? tempF : addrE1);
+      else if (ctx->ADD())  code = code || cast || instruction::FADD(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
+                                                                           Types.isIntegerTy(t1) ? tempF : addrE1);
+      else if (ctx->DIV())  code = code || cast || instruction::FDIV(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
+                                                                           Types.isIntegerTy(t1) ? tempF : addrE1);
+      else /*ctx->SUB()*/   code = code || cast || instruction::FSUB(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
+                                                                           Types.isIntegerTy(t1) ? tempF : addrE1);
+    }
+    // BOTH FLOAT
+    else {
+
+      if (ctx->MUL())       code = code || instruction::FMUL(temp, addrE0, addrE1);
+      else if (ctx->ADD())  code = code || instruction::FADD(temp, addrE0, addrE1);
+      else if (ctx->DIV())  code = code || instruction::FDIV(temp, addrE0, addrE1);
+      else /*ctx->SUB()*/   code = code || instruction::FSUB(temp, addrE0, addrE1);
+    }
   }
 
   putAddrDecor(ctx, temp); // temp addr
