@@ -68,6 +68,9 @@ public:
   void enterFunction(AslParser::FunctionContext *ctx);
   void exitFunction(AslParser::FunctionContext *ctx);
 
+  void enterFunc_decl_params(AslParser::Func_decl_paramsContext * ctx);
+  void exitFunc_decl_params(AslParser::Func_decl_paramsContext * ctx);
+
   void enterDeclarations(AslParser::DeclarationsContext *ctx);
   void exitDeclarations(AslParser::DeclarationsContext *ctx);
 

@@ -40,6 +40,9 @@ void CodeGenListener::exitProgram(AslParser::ProgramContext *ctx) {
 void CodeGenListener::enterFunction(AslParser::FunctionContext *ctx) {
   DEBUG_ENTER();
   subroutine subr(ctx->ID()->getText());
+  // Hi ha un primer parametre que sera el resultat a retornar 
+  // Nomes si es una funcio, no una accio (retorna alguna cosa)
+  if(ctx->basic_type()) subr.add_param("_result");
   Code.add_subroutine(subr);
   SymTable::ScopeId sc = getScopeDecor(ctx);
   Symbols.pushThisScope(sc);
@@ -51,6 +54,20 @@ void CodeGenListener::exitFunction(AslParser::FunctionContext *ctx) {
   code = code || instruction::RETURN();
   subrRef.set_instructions(code);
   Symbols.popScope();
+  DEBUG_EXIT();
+}
+
+
+void CodeGenListener::enterFunc_decl_params(AslParser::Func_decl_paramsContext * ctx) {
+  DEBUG_ENTER();
+}
+void CodeGenListener::exitFunc_decl_params(AslParser::Func_decl_paramsContext * ctx) {
+  
+  subroutine & subRef = Code.get_last_subroutine();
+  
+  for (auto i : ctx->ID())
+    subRef.add_param(i->getText());
+  
   DEBUG_EXIT();
 }
 
