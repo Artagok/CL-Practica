@@ -81,8 +81,6 @@ void CodeGenListener::exitDeclarations(AslParser::DeclarationsContext *ctx) {
 void CodeGenListener::enterVariable_decl(AslParser::Variable_declContext *ctx) {
   DEBUG_ENTER();
 }
-
-
 void CodeGenListener::exitVariable_decl(AslParser::Variable_declContext *ctx) {
   for (auto i : ctx->ID()) {
     subroutine       & subrRef = Code.get_last_subroutine();
@@ -189,11 +187,26 @@ void CodeGenListener::enterProcCall(AslParser::ProcCallContext *ctx) {
   DEBUG_ENTER();
 }
 void CodeGenListener::exitProcCall(AslParser::ProcCallContext *ctx) {
+  
+  // Action call, so there is no RETURN whatsoever
   instructionList code;
-  // std::string name = ctx->ident()->ID()->getSymbol()->getText();
-  std::string name = ctx->ident()->getText();
-  code = instruction::CALL(name);
+
+  for (auto i : ctx->expr())
+    code = code || getCodeDecor(i);
+
+  for (auto i : ctx->expr())
+    code = code || instruction::PUSH(getAddrDecor(i));
+
+  code = code || instruction::CALL(getAddrDecor(ctx->ident()));
+
+  // Traditional for instead of auto ranged based to avoid compiler warning
+  for (uint i = 0; i < (ctx->expr()).size(); ++i)
+    code = code || instruction::POP();
+
+  //putAddrDecor(ctx, temp);
+  //putOffsetDecor(ctx, "");
   putCodeDecor(ctx, code);
+
   DEBUG_EXIT();
 }
 
@@ -545,7 +558,10 @@ void CodeGenListener::exitFuncCall(AslParser::FuncCallContext * ctx) {
   instructionList code = instruction::PUSH();
 
   for (auto i : ctx->expr())
-    code = code || getCodeDecor(i) || instruction::PUSH(getAddrDecor(i));
+    code = code || getCodeDecor(i);
+
+  for (auto i : ctx->expr())
+    code = code || instruction::PUSH(getAddrDecor(i));
 
   code = code || instruction::CALL(getAddrDecor(ctx->ident()));
 
