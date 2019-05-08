@@ -518,6 +518,36 @@ void CodeGenListener::exitExprIdent(AslParser::ExprIdentContext *ctx) {
   DEBUG_EXIT();
 }
 
+void CodeGenListener::enterFuncCall(AslParser::FuncCallContext * ctx) {
+  DEBUG_ENTER();
+}
+void CodeGenListener::exitFuncCall(AslParser::FuncCallContext * ctx) {
+  
+  //std::string     addrE;
+  //instructionList codeE;
+  
+  // Empty push for the return variable
+  instructionList code = instruction::PUSH();
+
+  for (auto i : ctx->expr())
+    code = code || getCodeDecor(i) || instruction::PUSH(getAddrDecor(i));
+
+  code = code || instruction::CALL(getAddrDecor(ctx->ident()));
+
+  // Traditional for instead of auto ranged based to avoid compiler warning
+  for (uint i = 0; i < (ctx->expr()).size(); ++i)
+    code = code || instruction::POP();
+
+  std::string temp = "%"+codeCounters.newTEMP();
+  code = code || instruction::POP(temp);
+
+  putAddrDecor(ctx, temp);
+  putOffsetDecor(ctx, "");
+  putCodeDecor(ctx, code);
+
+  DEBUG_EXIT();
+}
+
 void CodeGenListener::enterIdent(AslParser::IdentContext *ctx) {
   DEBUG_ENTER();
 }
