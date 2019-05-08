@@ -412,12 +412,15 @@ void CodeGenListener::exitRelational(AslParser::RelationalContext *ctx) {
 
   TypesMgr::TypeId t0 = getTypeDecor(ctx->expr(0));
   TypesMgr::TypeId t1 = getTypeDecor(ctx->expr(1));
-  TypesMgr::TypeId t  = getTypeDecor(ctx);
+  //TypesMgr::TypeId t  = getTypeDecor(ctx);
 
-  std::string temp = "%"+codeCounters.newTEMP();
+  // stores the temporal FLOAT cast if isFloat(t0) XOR isFloat(t1)
+  bool floatXor     = Types.isFloatTy(t0) != Types.isFloatTy(t1);
+  std::string tempF = floatXor ? "%"+codeCounters.newTEMP() : "";
+  std::string temp  = "%"+codeCounters.newTEMP();
 
   // INT or CHAR or BOOL
-  if (not Types.isFloatTy(t)) {
+  if (not Types.isFloatTy(t0) and not Types.isFloatTy(t1)) {
 
     if (ctx->EQ())        code = code || instruction::EQ(temp, addrE0, addrE1);
     else if (ctx->NEQ())  code = code || instruction::EQ(temp, addrE0, addrE1) || instruction::NOT(temp, temp);
@@ -430,22 +433,34 @@ void CodeGenListener::exitRelational(AslParser::RelationalContext *ctx) {
   // FLOAT
   else {
 
-    std::string tempF = "%"+codeCounters.newTEMP(); // stores the temporal FLOAT cast
     instruction cast = Types.isIntegerTy(t0) ? instruction::FLOAT(tempF, addrE0) :
                                                instruction::FLOAT(tempF, addrE1) ;
+    // One FLOAT but NOT both
+    if (floatXor) {
 
-    if (ctx->EQ())        code = code || cast || instruction::EQ(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
-                                                                       Types.isIntegerTy(t1) ? tempF : addrE1);
-    else if (ctx->NEQ())  code = code || cast || instruction::EQ(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
-                                                                       Types.isIntegerTy(t1) ? tempF : addrE1) || instruction::NOT(temp, temp);
-    else if (ctx->LT())   code = code || cast || instruction::LT(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
-                                                                       Types.isIntegerTy(t1) ? tempF : addrE1);
-    else if (ctx->LTE())  code = code || cast || instruction::LE(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
-                                                                       Types.isIntegerTy(t1) ? tempF : addrE1);
-    else if (ctx->GT())   code = code || cast || instruction::LE(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
-                                                                       Types.isIntegerTy(t1) ? tempF : addrE1) || instruction::NOT(temp, temp);
-    else /*ctx->GTE()*/   code = code || cast || instruction::LT(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
-                                                                       Types.isIntegerTy(t1) ? tempF : addrE1) || instruction::NOT(temp, temp);
+      if (ctx->EQ())        code = code || cast || instruction::FEQ(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
+                                                                          Types.isIntegerTy(t1) ? tempF : addrE1);
+      else if (ctx->NEQ())  code = code || cast || instruction::FEQ(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
+                                                                          Types.isIntegerTy(t1) ? tempF : addrE1) || instruction::NOT(temp, temp);
+      else if (ctx->LT())   code = code || cast || instruction::FLT(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
+                                                                          Types.isIntegerTy(t1) ? tempF : addrE1);
+      else if (ctx->LTE())  code = code || cast || instruction::FLE(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
+                                                                          Types.isIntegerTy(t1) ? tempF : addrE1);
+      else if (ctx->GT())   code = code || cast || instruction::FLE(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
+                                                                          Types.isIntegerTy(t1) ? tempF : addrE1) || instruction::NOT(temp, temp);
+      else /*ctx->GTE()*/   code = code || cast || instruction::FLT(temp, Types.isIntegerTy(t0) ? tempF : addrE0,
+                                                                          Types.isIntegerTy(t1) ? tempF : addrE1) || instruction::NOT(temp, temp);
+    }
+    // BOTH FLOAT
+    else {
+
+      if (ctx->EQ())        code = code || instruction::FEQ(temp, addrE0, addrE1);
+      else if (ctx->NEQ())  code = code || instruction::FEQ(temp, addrE0, addrE1) || instruction::NOT(temp, temp);
+      else if (ctx->LT())   code = code || instruction::FLT(temp, addrE0, addrE1);
+      else if (ctx->LTE())  code = code || instruction::FLE(temp, addrE0, addrE1);
+      else if (ctx->GT())   code = code || instruction::FLE(temp, addrE0, addrE1) || instruction::NOT(temp, temp);
+      else /*ctx->GTE()*/   code = code || instruction::FLT(temp, addrE0, addrE1) || instruction::NOT(temp, temp);
+    }
   }
 
   putAddrDecor(ctx, temp);
