@@ -115,15 +115,26 @@ void CodeGenListener::enterAssignStmt(AslParser::AssignStmtContext *ctx) {
 }
 void CodeGenListener::exitAssignStmt(AslParser::AssignStmtContext *ctx) {
   instructionList  code;
-  std::string     addr1 = getAddrDecor(ctx->left_expr());
-  // std::string     offs1 = getOffsetDecor(ctx->left_expr());
-  instructionList code1 = getCodeDecor(ctx->left_expr());
-  // TypesMgr::TypeId tid1 = getTypeDecor(ctx->left_expr());
-  std::string     addr2 = getAddrDecor(ctx->expr());
-  // std::string     offs2 = getOffsetDecor(ctx->expr());
-  instructionList code2 = getCodeDecor(ctx->expr());
-  // TypesMgr::TypeId tid2 = getTypeDecor(ctx->expr());
-  code = code1 || code2 || instruction::LOAD(addr1, addr2);
+  
+  // LEFT_EXPR
+  std::string     addrLE = getAddrDecor(ctx->left_expr());
+  std::string     offsLE = getOffsetDecor(ctx->left_expr());
+  instructionList codeLE = getCodeDecor(ctx->left_expr());
+  TypesMgr::TypeId tidLE = getTypeDecor(ctx->left_expr());
+  
+  // EXPR
+  std::string     addrE = getAddrDecor(ctx->expr());
+  // std::string     offsE = getOffsetDecor(ctx->expr());
+  instructionList codeE = getCodeDecor(ctx->expr());
+  // TypesMgr::TypeId tidE = getTypeDecor(ctx->expr());
+  
+  // ARRAY ASSIGNEMENT
+  if (Types.isArrayTy(tidLE)) code = instruction::XLOAD(addrLE, offsLE, addrE);
+  
+  // NOT AN ARRAY ASSIGNEMENT
+  else code = instruction::LOAD(addrLE, addrE);
+  
+  code = codeLE || codeE || code;
   putCodeDecor(ctx, code);
   DEBUG_EXIT();
 }
@@ -315,9 +326,21 @@ void CodeGenListener::enterLeft_expr(AslParser::Left_exprContext *ctx) {
   DEBUG_ENTER();
 }
 void CodeGenListener::exitLeft_expr(AslParser::Left_exprContext *ctx) {
-  putAddrDecor(ctx, getAddrDecor(ctx->ident()));
-  putOffsetDecor(ctx, getOffsetDecor(ctx->ident()));
-  putCodeDecor(ctx, getCodeDecor(ctx->ident()));
+  instructionList code = getCodeDecor(ctx->ident());
+  std::string offset = "";
+  std::string address = getAddrDecor(ctx->ident());
+  
+    
+  // CAS ARRAY
+  if (ctx->expr()) {
+    code = code || getCodeDecor(ctx->expr());
+    offset = getAddrDecor(ctx->expr());
+  }
+  
+  putAddrDecor(ctx, address);
+  putOffsetDecor(ctx, offset);
+  putCodeDecor(ctx, code);
+  
   DEBUG_ENTER();
 }
 
