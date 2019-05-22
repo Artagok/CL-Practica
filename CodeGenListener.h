@@ -131,6 +131,9 @@ public:
   void enterExprIdent(AslParser::ExprIdentContext *ctx);
   void exitExprIdent(AslParser::ExprIdentContext *ctx);
 
+  void enterArrayIndex(AslParser::ArrayIndexContext * ctx);
+  void exitArrayIndex(AslParser::ArrayIndexContext * ctx);
+
   void enterFuncCall(AslParser::FuncCallContext * ctx);
   void exitFuncCall(AslParser::FuncCallContext * ctx);
 

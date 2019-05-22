@@ -120,7 +120,7 @@ void CodeGenListener::exitAssignStmt(AslParser::AssignStmtContext *ctx) {
   std::string     addrLE = getAddrDecor(ctx->left_expr());
   std::string     offsLE = getOffsetDecor(ctx->left_expr());
   instructionList codeLE = getCodeDecor(ctx->left_expr());
-  TypesMgr::TypeId tidLE = getTypeDecor(ctx->left_expr());
+  // TypesMgr::TypeId tidLE = getTypeDecor(ctx->left_expr());
   
   // EXPR
   std::string     addrE = getAddrDecor(ctx->expr());
@@ -129,10 +129,12 @@ void CodeGenListener::exitAssignStmt(AslParser::AssignStmtContext *ctx) {
   // TypesMgr::TypeId tidE = getTypeDecor(ctx->expr());
   
   // ARRAY ASSIGNEMENT
-  if (Types.isArrayTy(tidLE)) code = instruction::XLOAD(addrLE, offsLE, addrE);
+  if (ctx->left_expr()->expr())
+    code = instruction::XLOAD(addrLE, offsLE, addrE);
   
   // NOT AN ARRAY ASSIGNEMENT
-  else code = instruction::LOAD(addrLE, addrE);
+  else 
+    code = instruction::LOAD(addrLE, addrE);
   
   code = codeLE || codeE || code;
   putCodeDecor(ctx, code);
@@ -326,6 +328,7 @@ void CodeGenListener::enterLeft_expr(AslParser::Left_exprContext *ctx) {
   DEBUG_ENTER();
 }
 void CodeGenListener::exitLeft_expr(AslParser::Left_exprContext *ctx) {
+  
   instructionList code = getCodeDecor(ctx->ident());
   std::string offset = "";
   std::string address = getAddrDecor(ctx->ident());
@@ -566,6 +569,25 @@ void CodeGenListener::exitExprIdent(AslParser::ExprIdentContext *ctx) {
   putAddrDecor(ctx, getAddrDecor(ctx->ident()));
   putOffsetDecor(ctx, getOffsetDecor(ctx->ident()));
   putCodeDecor(ctx, getCodeDecor(ctx->ident()));
+  DEBUG_EXIT();
+}
+
+void CodeGenListener::enterArrayIndex(AslParser::ArrayIndexContext * ctx) {
+  DEBUG_ENTER();
+}
+void CodeGenListener::exitArrayIndex(AslParser::ArrayIndexContext * ctx) {
+  
+  instructionList code    = getCodeDecor(ctx->expr());
+  std::string     addrI   = getAddrDecor(ctx->ident());
+  std::string     offset  = getAddrDecor(ctx->expr());
+  std::string     temp    = "%"+codeCounters.newTEMP();
+
+  code = code || instruction::LOADX(temp, addrI, offset);
+
+  putAddrDecor(ctx, temp);
+  putOffsetDecor(ctx, "");
+  putCodeDecor(ctx, code);
+
   DEBUG_EXIT();
 }
 
