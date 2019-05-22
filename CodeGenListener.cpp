@@ -203,13 +203,24 @@ void CodeGenListener::exitProcCall(AslParser::ProcCallContext *ctx) {
   
   // Action call, so there is no RETURN whatsoever
   instructionList code;
+  auto param_types = Types.getFuncParamsTypes(getTypeDecor(ctx->ident()));
 
   for (auto i : ctx->expr())
     code = code || getCodeDecor(i);
 
-  for (auto i : ctx->expr())
-    code = code || instruction::PUSH(getAddrDecor(i));
-
+  int k = 0;
+  for (auto i : ctx->expr()) {
+    
+    // int 2 float CAST
+    if (Types.isFloatTy(param_types[k]) and Types.isIntegerTy(getTypeDecor(i))) {
+      
+      std::string tempF = "%"+codeCounters.newTEMP();
+      code = code || instruction::FLOAT(tempF, getAddrDecor(i)) || instruction::PUSH(tempF);
+    }
+    else 
+      code = code || instruction::PUSH(getAddrDecor(i));
+    ++k;
+  }
   code = code || instruction::CALL(getAddrDecor(ctx->ident()));
 
   // Traditional for instead of auto ranged based to avoid compiler warning
@@ -598,15 +609,27 @@ void CodeGenListener::exitFuncCall(AslParser::FuncCallContext * ctx) {
   
   //std::string     addrE;
   //instructionList codeE;
-  
+  auto param_types = Types.getFuncParamsTypes(getTypeDecor(ctx->ident()));
+
   // Empty push for the return variable
   instructionList code = instruction::PUSH();
 
   for (auto i : ctx->expr())
     code = code || getCodeDecor(i);
 
-  for (auto i : ctx->expr())
-    code = code || instruction::PUSH(getAddrDecor(i));
+  int k = 0;
+  for (auto i : ctx->expr()) {
+
+    // int 2 float CAST
+    if (Types.isFloatTy(param_types[k]) and Types.isIntegerTy(getTypeDecor(i))) {
+
+      std::string tempF = "%"+codeCounters.newTEMP();
+      code = code || instruction::FLOAT(tempF,getAddrDecor(i)) || instruction::PUSH(tempF);
+    }
+    else 
+      code = code || instruction::PUSH(getAddrDecor(i));
+    ++k;
+  }
 
   code = code || instruction::CALL(getAddrDecor(ctx->ident()));
 
