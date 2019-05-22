@@ -485,7 +485,16 @@ void TypeCheckListener::exitLogical(AslParser::LogicalContext * ctx) {
   DEBUG_EXIT();
 }
 
-
+void TypeCheckListener::enterParenthesis(AslParser::ParenthesisContext * ctx) {
+  DEBUG_ENTER();
+}
+void TypeCheckListener::exitParenthesis(AslParser::ParenthesisContext * ctx) {
+  
+  putTypeDecor(ctx, getTypeDecor(ctx->expr()));
+  putIsLValueDecor(ctx, getIsLValueDecor(ctx->expr()));
+  
+  DEBUG_EXIT();
+}
 
 void TypeCheckListener::enterValue(AslParser::ValueContext *ctx) {
   DEBUG_ENTER();

@@ -94,6 +94,8 @@ public:
   void enterLogical(AslParser::LogicalContext * ctx);
   void exitLogical(AslParser::LogicalContext * ctx);
 
+  void enterParenthesis(AslParser::ParenthesisContext * ctx);
+  void exitParenthesis(AslParser::ParenthesisContext * ctx);
 
   void enterValue(AslParser::ValueContext *ctx);
   void exitValue(AslParser::ValueContext *ctx);
