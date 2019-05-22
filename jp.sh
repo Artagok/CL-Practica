@@ -31,10 +31,12 @@ gen_code() {
         ./asl $ruta$fitxer > tcode.temp
     fi
 
-    diff $ruta$nom_fitxer$_t tcode.temp > diff.temp
+    # output diff
+    diff $ruta$nom_fitxer$_out <(../tvm/tvm tcode.temp < $ruta$nom_fitxer$_in) > out_diff.temp
+
     [[ $? == 0 ]] &&
-        echo -e "${green_color}OK: NO t-CODE DIFF!${no_color}\n" ||
-        echo -e "${red_color}$(cat diff.temp)${no_color}\n"
+        echo -e "${green_color}OK: NO OUTPUT DIFF!${no_color}\n" ||
+        echo -e "${red_color}$(cat out_diff.temp)${no_color}\n"
 }
 
 print_verbose_mode() {
@@ -51,12 +53,20 @@ print_verbose_mode() {
 
     if [[ $nom_fitxer =~ genc ]]
     then 
-        echo -e "${separator} INPUT ${separator}\n"
-        cat -n $ruta$fitxer; echo;
-        echo -e "${separator} EXPECTED t-CODE ${separator}\n"
-        cat -n $ruta$nom_fitxer$_t; echo;
-        echo -e "${separator} YOUR t-CODE ${separator}\n"
-        cat -n tcode.temp; echo;
+        # t-Code diff
+        diff $ruta$nom_fitxer$_t tcode.temp > diff.temp
+        if [[ $? == 0 ]]
+        then 
+            echo -e "${green_color}OK: NO t-CODE DIFF!${no_color}\n"
+        else
+            echo -e "${red_color}$(cat diff.temp)${no_color}\n"
+            echo -e "${separator} INPUT ${separator}\n"
+            cat -n $ruta$fitxer; echo;
+            echo -e "${separator} EXPECTED t-CODE ${separator}\n"
+            cat -n $ruta$nom_fitxer$_t; echo;
+            echo -e "${separator} YOUR t-CODE ${separator}\n"
+            cat -n tcode.temp; echo;
+        fi
     fi
 }
 
