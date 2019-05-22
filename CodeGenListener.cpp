@@ -263,12 +263,34 @@ void CodeGenListener::enterReadStmt(AslParser::ReadStmtContext *ctx) {
   DEBUG_ENTER();
 }
 void CodeGenListener::exitReadStmt(AslParser::ReadStmtContext *ctx) {
+  
   instructionList  code;
-  std::string     addr1 = getAddrDecor(ctx->left_expr());
-  // std::string     offs1 = getOffsetDecor(ctx->left_expr());
-  instructionList code1 = getCodeDecor(ctx->left_expr());
-  // TypesMgr::TypeId tid1 = getTypeDecor(ctx->left_expr());
-  code = code1 || instruction::READI(addr1);
+  std::string     addrLE = getAddrDecor(ctx->left_expr());
+  std::string     offsLE = getOffsetDecor(ctx->left_expr());
+  instructionList codeLE = getCodeDecor(ctx->left_expr());
+  TypesMgr::TypeId tLE   = getTypeDecor(ctx->left_expr());
+
+  // read into an ARRAY (i.e. read x[3])
+  if (ctx->left_expr()->expr()) {
+
+    std::string tempR = "%"+codeCounters.newTEMP();
+
+    if (Types.isIntegerTy(tLE) or Types.isBooleanTy(tLE)) code = code || instruction::READI(tempR);
+    else if (Types.isFloatTy(tLE))                        code = code || instruction::READF(tempR);
+    else /* isCharacter(tLE) */                           code = code || instruction::READC(tempR);
+                                                          code = code || instruction::XLOAD(addrLE, offsLE, tempR);
+  }
+  // read into a VARIABLE (i.e. read x)
+  else {
+    
+    if (Types.isIntegerTy(tLE) or Types.isBooleanTy(tLE)) code = code || instruction::READI(addrLE);
+    else if (Types.isFloatTy(tLE))                        code = code || instruction::READF(addrLE);
+    else /* isCharacter(tLE) */                           code = code || instruction::READC(addrLE);
+  }
+
+  // Add LeftExpression code before everything
+  code = codeLE || code;
+
   putCodeDecor(ctx, code);
   DEBUG_EXIT();
 }
