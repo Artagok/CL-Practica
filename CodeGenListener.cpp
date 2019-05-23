@@ -380,15 +380,44 @@ void CodeGenListener::exitLeft_expr(AslParser::Left_exprContext *ctx) {
     
   // CAS ARRAY
   if (ctx->expr()) {
-    code = code || getCodeDecor(ctx->expr());
+
+    std::string tempOff = "%"+codeCounters.newTEMP();
     offset = getAddrDecor(ctx->expr());
+
+    // Array LOCAL
+    if (Symbols.isLocalVarClass(address)) {
+      
+      code = code || getCodeDecor(ctx->expr());
+      code = code || instruction::LOAD(tempOff, "1");
+      code = code || instruction::MUL(tempOff, offset, tempOff);
+
+      putAddrDecor(ctx, address);
+    }
+    // Array PARAM per REFERENCIA
+    else {
+
+      code = code || getCodeDecor(ctx->expr());
+      std::string tempA = "%"+codeCounters.newTEMP();
+      code = code || instruction::LOAD(tempA, address);
+      code = code || instruction::LOAD(tempOff, "1");
+      code = code || instruction::MUL(tempOff, offset, tempOff);
+
+      putAddrDecor(ctx, tempA);
+    }
+
+    putOffsetDecor(ctx, tempOff);
+    putCodeDecor(ctx, code);
   }
+
+  // CAS IDENT
+  else {
   
-  putAddrDecor(ctx, address);
-  putOffsetDecor(ctx, offset);
-  putCodeDecor(ctx, code);
-  
-  DEBUG_ENTER();
+    putAddrDecor(ctx, address);
+    putOffsetDecor(ctx, offset);
+    putCodeDecor(ctx, code); 
+  }
+
+  DEBUG_EXIT();
 }
 
 
@@ -620,13 +649,29 @@ void CodeGenListener::enterArrayIndex(AslParser::ArrayIndexContext * ctx) {
   DEBUG_ENTER();
 }
 void CodeGenListener::exitArrayIndex(AslParser::ArrayIndexContext * ctx) {
-  
+
   instructionList code    = getCodeDecor(ctx->expr());
   std::string     addrI   = getAddrDecor(ctx->ident());
   std::string     offset  = getAddrDecor(ctx->expr());
+  
   std::string     temp    = "%"+codeCounters.newTEMP();
+  std::string     tempOff = "%"+codeCounters.newTEMP();
 
-  code = code || instruction::LOADX(temp, addrI, offset);
+  code = code || instruction::LOAD(tempOff, "1");
+  code = code || instruction::MUL(tempOff, offset, tempOff);
+
+  // LOCAL
+  if (Symbols.isLocalVarClass(addrI)) {
+    
+    code = code || instruction::LOADX(temp, addrI, tempOff);
+  }
+  // PARAM REF
+  else {
+
+    std::string tempA = "%"+codeCounters.newTEMP();
+    code = code || instruction::LOAD(tempA, addrI);
+    code = code || instruction::LOADX(temp, tempA, tempOff);
+  }
 
   putAddrDecor(ctx, temp);
   putOffsetDecor(ctx, "");
