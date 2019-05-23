@@ -483,8 +483,9 @@ void CodeGenListener::exitArithmetic(AslParser::ArithmeticContext *ctx) {
     else if (ctx->ADD())  code = code || instruction::ADD(temp, addrE0, addrE1);
     else if (ctx->DIV())  code = code || instruction::DIV(temp, addrE0, addrE1);
     else if (ctx->SUB())  code = code || instruction::SUB(temp, addrE0, addrE1);
-    else { // ctx->MOD()
-    }
+    else /* ctx->MOD() */ code = code || instruction::DIV(temp, addrE0, addrE1) 
+                                      || instruction::MUL(temp, temp, addrE1) 
+                                      || instruction::SUB(temp, addrE0, temp);
   }
 
   // FLOAT [MOD not possible with FLOAT]
