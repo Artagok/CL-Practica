@@ -114,27 +114,37 @@ void CodeGenListener::enterAssignStmt(AslParser::AssignStmtContext *ctx) {
   DEBUG_ENTER();
 }
 void CodeGenListener::exitAssignStmt(AslParser::AssignStmtContext *ctx) {
+  
   instructionList  code;
   
   // LEFT_EXPR
   std::string     addrLE = getAddrDecor(ctx->left_expr());
   std::string     offsLE = getOffsetDecor(ctx->left_expr());
   instructionList codeLE = getCodeDecor(ctx->left_expr());
-  // TypesMgr::TypeId tidLE = getTypeDecor(ctx->left_expr());
+  TypesMgr::TypeId tidLE = getTypeDecor(ctx->left_expr());
   
   // EXPR
   std::string     addrE = getAddrDecor(ctx->expr());
   // std::string     offsE = getOffsetDecor(ctx->expr());
   instructionList codeE = getCodeDecor(ctx->expr());
-  // TypesMgr::TypeId tidE = getTypeDecor(ctx->expr());
+  TypesMgr::TypeId tidE = getTypeDecor(ctx->expr());
   
+  // int2float CAST for array or non array
+  if (Types.isFloatTy(tidLE) and Types.isIntegerTy(tidE)) {
+    
+    std::string tempF = "%"+codeCounters.newTEMP();
+    code = code || instruction::FLOAT(tempF, addrE);
+    putAddrDecor(ctx->expr(), tempF);
+    addrE = getAddrDecor(ctx->expr());
+  }
+
   // ARRAY ASSIGNEMENT
   if (ctx->left_expr()->expr())
-    code = instruction::XLOAD(addrLE, offsLE, addrE);
+    code = code || instruction::XLOAD(addrLE, offsLE, addrE);
   
   // NOT AN ARRAY ASSIGNEMENT
   else 
-    code = instruction::LOAD(addrLE, addrE);
+    code = code || instruction::LOAD(addrLE, addrE);
   
   code = codeLE || codeE || code;
   putCodeDecor(ctx, code);
