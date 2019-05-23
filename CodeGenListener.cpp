@@ -205,21 +205,31 @@ void CodeGenListener::exitProcCall(AslParser::ProcCallContext *ctx) {
   instructionList code;
   auto param_types = Types.getFuncParamsTypes(getTypeDecor(ctx->ident()));
 
-  for (auto i : ctx->expr())
-    code = code || getCodeDecor(i);
-
   int k = 0;
   for (auto i : ctx->expr()) {
-    
+   
+    code = code || getCodeDecor(i);
+
     // int 2 float CAST
     if (Types.isFloatTy(param_types[k]) and Types.isIntegerTy(getTypeDecor(i))) {
       
       std::string tempF = "%"+codeCounters.newTEMP();
-      code = code || instruction::FLOAT(tempF, getAddrDecor(i)) || instruction::PUSH(tempF);
+      code = code || instruction::FLOAT(tempF, getAddrDecor(i));
+      putAddrDecor(i, tempF);
     }
-    else 
-      code = code || instruction::PUSH(getAddrDecor(i));
+    // passing an ARRAY by REFERENCE
+    else if (Types.isArrayTy(getTypeDecor(i))) {
+
+      std::string tempA = "%"+codeCounters.newTEMP();
+      code = code || instruction::ALOAD(tempA, getAddrDecor(i));
+      putAddrDecor(i, tempA);
+    }
     ++k;
+  }
+
+  code = code || instruction::PUSH();
+  for (auto i : ctx->expr()) {
+    code = code || instruction::PUSH(getAddrDecor(i));
   }
   code = code || instruction::CALL(getAddrDecor(ctx->ident()));
 
@@ -227,6 +237,7 @@ void CodeGenListener::exitProcCall(AslParser::ProcCallContext *ctx) {
   for (uint i = 0; i < (ctx->expr()).size(); ++i)
     code = code || instruction::POP();
 
+  code = code || instruction::POP();
   //putAddrDecor(ctx, temp);
   //putOffsetDecor(ctx, "");
   putCodeDecor(ctx, code);
@@ -631,26 +642,36 @@ void CodeGenListener::exitFuncCall(AslParser::FuncCallContext * ctx) {
   
   //std::string     addrE;
   //instructionList codeE;
+  instructionList code;
   auto param_types = Types.getFuncParamsTypes(getTypeDecor(ctx->ident()));
-
-  // Empty push for the return variable
-  instructionList code = instruction::PUSH();
-
-  for (auto i : ctx->expr())
-    code = code || getCodeDecor(i);
 
   int k = 0;
   for (auto i : ctx->expr()) {
-
+   
+    code = code || getCodeDecor(i);
+    
     // int 2 float CAST
     if (Types.isFloatTy(param_types[k]) and Types.isIntegerTy(getTypeDecor(i))) {
 
       std::string tempF = "%"+codeCounters.newTEMP();
-      code = code || instruction::FLOAT(tempF,getAddrDecor(i)) || instruction::PUSH(tempF);
+      code = code || instruction::FLOAT(tempF,getAddrDecor(i));
+      putAddrDecor(i, tempF);
     }
-    else 
-      code = code || instruction::PUSH(getAddrDecor(i));
+    // passing an ARRAY by REFERENCE
+    else if (Types.isArrayTy(getTypeDecor(i))) {
+
+      std::string tempA = "%"+codeCounters.newTEMP();
+      code = code || instruction::ALOAD(tempA, getAddrDecor(i));
+      putAddrDecor(i, tempA);
+    }
     ++k;
+  }
+
+  // Empty push for the return variable
+  code = code || instruction::PUSH();
+  
+  for (auto i : ctx->expr()) {
+    code = code || instruction::PUSH(getAddrDecor(i));
   }
 
   code = code || instruction::CALL(getAddrDecor(ctx->ident()));
