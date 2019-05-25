@@ -332,8 +332,13 @@ void CodeGenListener::exitWriteExpr(AslParser::WriteExprContext *ctx) {
     code = codeE || instruction::WRITEI(addrE);
   else if (Types.isFloatTy(t))
     code = codeE || instruction::WRITEF(addrE);
-  else  /* isCharacterTy(t) */
-    code = codeE || instruction::WRITEC(addrE);
+  else { /* isCharacterTy(t) */
+    std::string s = ctx->expr()->getText();
+    //std::cout << "expr = " << s.substr(1,s.size()-2) << std::endl;
+    std::string tempC = "%"+codeCounters.newTEMP();
+    code = instruction::CHLOAD(tempC, s.substr(1,s.size()-2)) || 
+           instruction::WRITEC(tempC);
+  }
 
   putCodeDecor(ctx, code);
   DEBUG_EXIT();
