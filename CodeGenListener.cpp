@@ -128,6 +128,45 @@ void CodeGenListener::exitAssignStmt(AslParser::AssignStmtContext *ctx) {
   // std::string     offsE = getOffsetDecor(ctx->expr());
   instructionList codeE = getCodeDecor(ctx->expr());
   TypesMgr::TypeId tidE = getTypeDecor(ctx->expr());
+
+  // ARRAY to ARRAY a,b:array and a = b
+  if (Types.isArrayTy(tidLE) and Types.isArrayTy(tidE)) {
+
+    bool isLocalLE = Symbols.isLocalVarClass(addrLE);
+    bool isLocalE  = Symbols.isLocalVarClass(addrE);
+
+    std::string tempAddrLE = "%"+codeCounters.newTEMP();
+    std::string tempAddrE  = "%"+codeCounters.newTEMP();
+
+    if (not isLocalLE) code = code || instruction::LOAD(tempAddrLE, addrLE);
+    if (not isLocalE)  code = code || instruction::LOAD(tempAddrE, addrE);
+
+    std::string tempIndex  = "%"+codeCounters.newTEMP();
+    std::string tempIncrem = "%"+codeCounters.newTEMP();
+    std::string tempSize   = "%"+codeCounters.newTEMP();
+    std::string tempOffset = "%"+codeCounters.newTEMP();
+    std::string tempOffHld = "%"+codeCounters.newTEMP();
+    std::string tempCompar = "%"+codeCounters.newTEMP();
+    std::string tempValue  = "%"+codeCounters.newTEMP();
+
+    std::string labelWhile = "while"+codeCounters.newLabelWHILE();
+    std::string labelEndWhile = "end"+labelWhile;
+
+    code = code || instruction::ILOAD(tempIndex, "0");
+    code = code || instruction::ILOAD(tempIncrem, "1");
+    code = code || instruction::ILOAD(tempSize, std::to_string(Types.getArraySize(Symbols.getType(addrLE))));
+    code = code || instruction::ILOAD(tempOffset, "1");
+
+    code = code || instruction::LABEL(labelWhile);
+    code = code || instruction::LT(tempCompar, tempIndex, tempSize);
+    code = code || instruction::FJUMP(tempCompar, labelEndWhile);
+    code = code || instruction::MUL(tempOffHld, tempOffset, tempIndex);
+    code = code || instruction::LOADX(tempValue, isLocalE ? addrE : tempAddrE, tempOffHld);
+    code = code || instruction::XLOAD(isLocalLE ? addrLE : tempAddrLE, tempOffHld, tempValue);
+    code = code || instruction::ADD(tempIndex, tempIndex, tempIncrem);
+    code = code || instruction::UJUMP(labelWhile);
+    code = code || instruction::LABEL(labelEndWhile);
+  }
   
   // int2float CAST for array or non array
   if (Types.isFloatTy(tidLE) and Types.isIntegerTy(tidE)) {
