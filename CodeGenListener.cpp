@@ -367,17 +367,9 @@ void CodeGenListener::exitWriteExpr(AslParser::WriteExprContext *ctx) {
 
   TypesMgr::TypeId t = getTypeDecor(ctx->expr());
 
-  if (Types.isIntegerTy(t) or Types.isBooleanTy(t))
-    code = codeE || instruction::WRITEI(addrE);
-  else if (Types.isFloatTy(t))
-    code = codeE || instruction::WRITEF(addrE);
-  else { /* isCharacterTy(t) */
-    std::string s = ctx->expr()->getText();
-    //std::cout << "expr = " << s.substr(1,s.size()-2) << std::endl;
-    std::string tempC = "%"+codeCounters.newTEMP();
-    code = instruction::CHLOAD(tempC, s.substr(1,s.size()-2)) || 
-           instruction::WRITEC(tempC);
-  }
+  if (Types.isIntegerTy(t) or Types.isBooleanTy(t)) code = codeE || instruction::WRITEI(addrE);
+  else if (Types.isFloatTy(t))                      code = codeE || instruction::WRITEF(addrE);
+  else /* isCharacterTy(t) */                       code = codeE || instruction::WRITEC(addrE);
 
   putCodeDecor(ctx, code);
   DEBUG_EXIT();
@@ -647,7 +639,8 @@ void CodeGenListener::exitValue(AslParser::ValueContext *ctx) {
 
   if (ctx->INTVAL())        code = instruction::ILOAD(temp, ctx->getText());
   else if (ctx->FLOATVAL()) code = instruction::FLOAD(temp, ctx->getText());
-  else if (ctx->CHARVAL())  code = instruction::CHLOAD(temp, ctx->getText());
+  else if (ctx->CHARVAL()) {std::string s = ctx->getText();
+                            code = instruction::CHLOAD(temp, s.substr(1,s.size()-2));}
   else /* ctx->BOOLVAL() */ code = instruction::LOAD(temp, (ctx->getText()=="true" ? "1":"0"));
 
   putAddrDecor(ctx, temp);
