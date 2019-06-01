@@ -6,9 +6,9 @@
 
 ### Listeners
 
-* SymbolsListener :arrow_right: Declaracio de variables i omplir taula de simbols
-* TypeCheckListener :arrow_right: Semantic type-check, comprovacio de tipus
-* CodeGenListener: :arrow_right: Generacio de t-code
+* SymbolsListener: Variable declaration and fill up Symbols Table
+* TypeCheckListener: Semantic type-check, compile time errors (typing)
+* CodeGenListener: Three-address code generation. (t-code due to high temporal register usage)
 
 ### Main
 
